@@ -1,0 +1,6 @@
+# Architecture evidence/profile for the R9700 cross-verifier.
+# Kernel/runtime knobs may be added here once measured on the real card.
+architecture = "gfx1201"
+role = "cross-verifier"
+runtime = "hipfire-auto"
+

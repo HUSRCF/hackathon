@@ -1,0 +1,11 @@
+# Install only into the workspace overlay created from the AIAA base environment.
+# Torch, ROCm, RDKit, Gemmi, OpenMM, PDBFixer, FastAPI, and fair-esm come from AIAA.
+meeko==0.7.1
+vina==1.2.7
+posebusters==0.6.5
+prolif==2.2.0
+spyrmsd==0.9.0
+dimorphite_dl==2.0.2
+pyseekdb==1.4.0
+FlagEmbedding==1.4.0
+PyMuPDF==1.28.0

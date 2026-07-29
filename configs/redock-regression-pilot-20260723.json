@@ -1,0 +1,51 @@
+{
+  "schema_version": "1.0",
+  "evaluation_design": "PILOT_RETROSPECTIVE",
+  "target_case_count": 10,
+  "holdout": null,
+  "cases": [
+    {
+      "case_id": "1iep",
+      "result": {
+        "path": "experiment-results/redock-1iep-20260723-final/result.json",
+        "sha256": "9f767a8baa5771bf5eb1a7dce03382661668d87ea81fef71362e4b2c9d32cc67"
+      }
+    },
+    {
+      "case_id": "1ke5-ls1",
+      "result": {
+        "path": "experiment-results/redock-1ke5-ls1-20260723-final/result.json",
+        "sha256": "24594c9db67fd5873bb8413826b9534843d03e9acb5490de19c38033c5e912ff"
+      }
+    },
+    {
+      "case_id": "1s19-mc9",
+      "result": {
+        "path": "experiment-results/redock-1s19-mc9-20260723-final/result.json",
+        "sha256": "af2b5b81e952bd9205760f7f15f9468cb86fb015b4ff101f821736903ec56cae"
+      }
+    },
+    {
+      "case_id": "1s3v",
+      "result": {
+        "path": "experiment-results/redock-1s3v-20260723-final/result.json",
+        "sha256": "0a48d181dff83cfd5b60b013eb13e48314fead6704cef64f6a3ca6f99829acdb"
+      }
+    },
+    {
+      "case_id": "1s3v-tqd",
+      "result": {
+        "path": "experiment-results/redock-1s3v-tqd-20260723-final/result.json",
+        "sha256": "9e97875a686179bd8c208ec2cf903e9a30c7a2e28ca90df826ed35d78db1a7c1"
+      }
+    },
+    {
+      "case_id": "1uou",
+      "result": {
+        "path": "experiment-results/redock-1uou-20260723-final/result.json",
+        "sha256": "01b8f78ba9f157c460b4f361920d1e619a8f6f2e500a1b2ada92f788512464b0"
+      }
+    }
+  ],
+  "manifest_sha256": "2f1f55a65ebf8d7717e08f84d46b4575d61335a5aac2ce1799af627608437a13"
+}

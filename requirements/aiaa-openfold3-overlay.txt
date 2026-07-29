@@ -1,0 +1,10 @@
+# Runtime-only OpenFold3 additions inherited on top of AIAA.
+# Deliberately do not list/install torch, triton, ROCm, numpy, RDKit, or Gemmi.
+setuptools-scm==10.2.1
+ml-collections==1.0.0
+pytorch-lightning==2.6.5
+pdbeccdutils==1.0.3
+kalign-python==3.6.0
+ijson==3.5.0
+memory_profiler==0.61.0
+func_timeout==4.3.5

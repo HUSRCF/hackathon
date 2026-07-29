@@ -1,0 +1,6 @@
+# Architecture evidence/profile for the W7900 primary machine.
+# Keep semantic behavior in ../semantic.toml, not here.
+architecture = "gfx1100"
+role = "primary"
+runtime = "hipfire-auto"
+

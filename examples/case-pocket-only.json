@@ -1,0 +1,20 @@
+{
+  "case_id": "demo-pocket-only",
+  "title": "Synthetic pocket protocol fixture; not a scientific result",
+  "mode": "pocket_only",
+  "seed": 20260721,
+  "target": {
+    "name": "fixture-target",
+    "sequences": ["ACDEFGHIKLMNPQRSTVWY"]
+  },
+  "pocket": {
+    "residues": ["A:1"],
+    "pharmacophore_file": "examples/pocket-query.json"
+  },
+  "privacy": {
+    "network_allowed": false,
+    "approved_domains": [],
+    "sequence_upload_allowed": false,
+    "redact_internal_paths": true
+  }
+}

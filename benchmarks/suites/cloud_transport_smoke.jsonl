@@ -1,0 +1,1 @@
+{"id":"cloud_stream_transport","messages":[{"role":"user","content":"只回复：DEEPSEEK_STREAM_OK"}],"max_tokens":32,"checks":{"min_chars":18,"contains":["DEEPSEEK_STREAM_OK"]}}

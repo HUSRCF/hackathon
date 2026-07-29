@@ -1,0 +1,10 @@
+# These fields define the common workload and must match on W7900 and R9700.
+[generation]
+temperature = 0.0
+tool_call_max_tokens = 2048
+dflash = false
+
+[agent]
+max_steps = 6
+allow_arbitrary_shell = false
+

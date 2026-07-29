@@ -1,0 +1,13 @@
+# Exact packages local to .venv-aiaa-openfold3 on 2026-07-21.
+# openfold3 itself is installed editable from the pinned official checkout.
+func_timeout==4.3.5
+ijson==3.5.0
+kalign-python==3.6.0
+lightning-utilities==0.15.3
+memory-profiler==0.61.0
+ml_collections==1.0.0
+pdbeccdutils==1.0.3
+pytorch-lightning==2.6.5
+setuptools-scm==10.2.1
+torchmetrics==1.9.0
+vcs-versioning==2.2.2

@@ -1,0 +1,4 @@
+{"id":"exact_product","messages":[{"role":"system","content":"严格按用户要求作答，不添加解释。"},{"role":"user","content":"只输出五个字符：AMD好用"}],"max_tokens":32,"checks":{"min_chars":5,"contains":["AMD"]}}
+{"id":"deterministic_math","messages":[{"role":"system","content":"给出简短且可核验的答案。"},{"role":"user","content":"计算 17×23，并在最终答案中明确写出结果。"}],"max_tokens":64,"checks":{"min_chars":3,"contains":["391"]}}
+{"id":"private_agent_plan","messages":[{"role":"system","content":"你是完全离线运行的隐私助手。"},{"role":"user","content":"用三条要点说明本地 AI Agent 在处理私人会议记录时，应如何限制数据外泄、工具权限和长期记忆。"}],"max_tokens":256,"checks":{"min_chars":60}}
+{"id":"code_reasoning","messages":[{"role":"system","content":"你是代码审查助手，回答必须包含复杂度分析。"},{"role":"user","content":"写一个 Python 函数合并两个已排序整数列表，不调用 sorted，并解释时间和额外空间复杂度。"}],"max_tokens":384,"checks":{"min_chars":120,"contains":["def","O("]}}

@@ -1,0 +1,235 @@
+[screening]
+top_k = 512
+rrf_k = 60
+
+# Replace every placeholder digest with a measured lowercase SHA-256. Commands are argv arrays;
+# they are never executed through a shell. Production workers require bubblewrap network isolation.
+#
+# OpenFold3 is optional schema-2 side evidence, not a DOCKED dependency. For automatic selection,
+# first run with --stop-after selected, build a batch bound to that frozen selection, then attach
+# these local files before resuming DOCKED under these exact support keys:
+#   protbind case attach RUN_ID --name openfold_batch --file openfold-batch.json \
+#     --media-type application/json
+#   protbind case attach RUN_ID --name openfold_checkpoint --file openfold3.ckpt \
+#     --media-type application/octet-stream
+#   protbind case attach RUN_ID --name openfold_environment_lock \
+#     --file experiment-results/aiaa-openfold3-environment.json \
+#     --media-type application/json
+#   protbind case resume RUN_ID --worker-config configs/protbind-workers.toml
+#
+# The repository currently has a strict cofold-input-batch validator but no public builder/CLI.
+# openfold-batch.json must therefore come from reviewed external tooling; this is an expert import
+# path, not a turnkey automatic OpenFold flow. Cofold runs at the start of DOCKED with a schema-2
+# COFOLDED envelope whose previous stage is SELECTED. Full Vina still uses SELECTED as its main
+# upstream and receives cofold_evidence_bundle only when the optional task completed.
+#
+# weight_sha256 is SHA256(openfold3.ckpt). code_sha256 is the canonical-JSON SHA-256 from
+# workers/openfold3_worker.py:composite_code_sha256(
+# SHA256(aiaa-openfold3-environment.json), PACKAGE_SOURCE_SHA256).
+# This binds a local run but is not an upstream-trusted digest allowlist; do not claim official
+# byte equivalence until an approved import receipt freezes an independently verified source hash.
+# It binds schema_version, adapter hash, the canonical path/hash manifest of every
+# src/protbind_agent/**/*.py file (the adapter depends on that runtime), environment-lock hash,
+# and the measured OpenFold runtime manifest:
+#   protbind_runtime_sha256 = SHA256(canonical_json([[repository-relative-path, file-sha256], ...]))
+# all openfold3/**/*.py files, everything under core/data/resources/, and
+# model_setting_presets.yml. The official 0.4.3 manifest is exactly 317 files with SHA-256
+# 742e9bf654b13f67783d095a2327af3ed31163580eaa7b4c548e8a8eb2e68010. The installed
+# package allowlist is scanned from the actual imported package root (including the official
+# editable AIAA-backed overlay), not from distribution RECORD. Version/SCM/entry-point metadata is
+# also attested.
+#
+# Replace <absolute-repo> with this reviewed checkout. The wrapper enters the dedicated
+# AIAA-backed overlay and reuses AIAA's ROCm Torch/Triton; it does not select an environment from
+# the ambient working directory or install a second Torch wheel.
+# HIP_VISIBLE_DEVICES must contain one canonical numeric device only; do not also set ROCr/CUDA
+# mask aliases. Permit one concurrent OpenFold job. On a dual-gfx1100 host use GPU0 for OpenFold
+# (and later OpenMM) and reserve GPU1 for HipFire. Upstream OpenFold devices=2/4 only distributes
+# queries and does not pool VRAM; the current ProtBind adapter does not expose that multi-device
+# mode. This adapter is FP32 and single-GPU/single-job.
+# Production fixes one diffusion sample per candidate; multi-sample experiments require a separate
+# standalone benchmark and cannot enter the production cofold side-task evidence.
+# OpenFold3 0.4.3 production accepts only its documented default openfold3-p2-155k checkpoint,
+# with exact byte size 2,287,928,196. There is no supported small/medium/large checkpoint tier.
+# The suffix and checkpoint file size are not a VRAM tier or an inference peak-memory estimate.
+# PROTBIND_TEST_RUNTIME is reserved for direct protocol tests and WorkerConfig rejects it.
+# minimum_free_vram_gib=28.0 is only a pre-run admission floor, not a peak-VRAM cap/measurement.
+# It is a conservative shared default for the final 48 GB-class gfx1100 platform, but does not
+# validate that a real query will fit. The host
+# takes a same-user host-global OpenFold lease plus a lease keyed by HIP_VISIBLE_DEVICES. Same-device
+# conflicts get recoverable GPU_BUSY; a second OpenFold job on another device gets OPENFOLD_BUSY.
+# Leases span ProtBind workspaces but do not coordinate external HipFire: assign OpenFold GPU0 and
+# HipFire GPU1.
+# The batch must bind this run's screening artifact, library index, receptor, quick-Vina poses and
+# boxes, and deterministic rankings; see workers/README.md.
+
+# [workers.cofold]
+# engine = "openfold3"
+# argv = ["<absolute-repo>/scripts/aiaa-openfold3.sh", "python", "<absolute-repo>/workers/openfold3_worker.py"]
+# timeout_seconds = 7200
+# isolate_network = true
+# [workers.cofold.provenance]
+# model_revision = "openfold3-0.4.3@0bb17be5199846e806b6347b6e17c6249c88ff1b"
+# weight_sha256 = "<64-lowercase-hex-characters>"
+# code_sha256 = "<composite-64-lowercase-hex-characters>"
+# [workers.cofold.parameters]
+# num_diffusion_samples = 1
+# command_timeout_seconds = 7200
+# low_mem = true
+# use_triton_triangle_kernels = true
+# use_msa_server = false
+# checkpoint_name = "openfold3-p2-155k"
+# minimum_free_vram_gib = 28.0
+# [workers.cofold.environment]
+# HIP_VISIBLE_DEVICES = "0"
+
+# ESMFold v1 is not configured as a main-stage worker here. Run the attested smoke/worker separately,
+# stop the case at INPUT_VALIDATED, then attach only its verified esmfold_receipt before
+# RECEPTOR_READY. A generic esmfold_structure attach is rejected. The final 24-aa single-W7900
+# warm receipt recorded 8,496,247,808 peak allocated bytes, 26.112 s model load, 3.653 s inference,
+# and 37.425 s end to end; those values are protocol/runtime smoke evidence, not a benchmark.
+
+# Production adapter contract. Use the exact local AIAA CPU toolchain, attach its frozen environment
+# audit, then measure the two
+# provenance digests with workers/vina_worker.py helpers. weight_sha256 is the canonical runtime
+# asset digest (Python/Vina, both Meeko entry points, and Meeko/RDKit/Gemmi/NumPy/SciPy manifests).
+# code_sha256 additionally binds the adapter, every src/protbind_agent/**/*.py file, that runtime
+# asset digest, and support_vina_environment_lock. Executable parameters must be absolute paths;
+# the worker never searches PATH and invokes Vina with explicit --cpu/--seed/box parameters.
+#
+#   scripts/aiaa-protbind.sh scripts/aiaa_environment_audit.py \
+#     --output experiment-results/aiaa-environment.json
+#   protbind case attach RUN_ID --name vina_environment_lock \
+#     --file experiment-results/aiaa-environment.json --media-type application/json
+#
+# The adapter is pinned to AutoDock Vina 1.2.7 and Meeko 0.7.1. The
+# RDKit/Gemmi/NumPy/SciPy version values must exactly match the attached environment audit. CPU=1 is
+# the conservative default so docking can run
+# without occupying either Radeon GPU. The adapter consumes schema-2 SELECTED candidates directly;
+# OpenFold output is optional. Canonical pose/pose_sdf is reconstructed SDF, while pose_pdbqt,
+# all_modes_pdbqt and all_modes_sdf preserve raw and multi-mode outputs. Exact non-fixture
+# pose-extraction and receptor-preparation receipts are emitted for validation attestation.
+# Candidate-specific preparation/docking failures are emitted in the bundle failures array and
+# never receive a fabricated score.
+#
+# SELECTED uses a distinct typed CPU-only profile. It evaluates every deterministic quick request
+# from the top-128 scaffold/microstate plan: successes plus explicit failures exactly cover the
+# request set, and failures never receive a score, pose, or evidence. Scores are used only for
+# pruning to top 16.
+# Selection preparation/finalization is config 2.5; the typed quick-input producer is 1.2 and the
+# quick worker profile is 1.3. A mandatory schema/producer-2.0 protbind.docking-box-receipt binds the
+# receptor ArtifactRef/SHA-256, source, center/size and receptor-cartesian-angstrom frame. Every
+# dimension must be 4..60 angstrom and volume <=27000 cubic angstrom. The host reparses the exact
+# receptor and requires at least one standard-protein heavy atom inside the box. The same receipt
+# must be present in the preparation, quick input, every request, inner/outer evidence, evaluation
+# batch/run metadata and final selection bundle. Atom overlap proves coordinate-frame plausibility
+# only, never biological-site validity. user-center/user-residues remain hypothesis-only;
+# co-crystal-ligand, fpocket-p2rank-consensus and public-benchmark-reference require a hash-bound,
+# coordinate-free protbind.site-derivation-evidence artifact. It binds receptor/box/frame/method and
+# source SHA-256 commitments without exposing validation reference coordinates to screening.
+# They are not DOCKED evidence. The full [workers.dock] profile below reruns Vina independently at
+# exhaustiveness=32/num_modes=9. Do not configure a GPU mask for workers.select: both Radeon GPUs
+# remain available to OpenFold/OpenMM/HipFire while this CPU pass runs.
+#
+# quick weight_sha256 is the same attested runtime-assets digest as full Vina. Its code_sha256 is
+# workers/quick_vina_worker.py:composite_code_sha256(environment_lock_sha256,
+# runtime_assets_sha256), which additionally binds the thin profile and shared vina_worker.py.
+# model_revision is workers/quick_vina_worker.py:quick_model_revision(parameters).
+# The historical direct AIAA v3 profile-1.2/config-2.3/input-1.1 smoke completed 3/3 requests with a
+# 36-entry closure and tool scores -1.942/-1.896/-1.753. Evidence is under
+# experiment-results/aiaa-selection-quick-vina-20260723-v3. Its contract and runtime hash predate
+# the site gate, so v3 and the retained v2 directory are not current-contract evidence. The
+# Current v4 profile-1.3/config-2.5/input-1.2/box-receipt-2.0 direct evidence is under
+# experiment-results/aiaa-selection-quick-vina-20260725-v4: smoke/provenance SHA-256
+# 8b19a1d9aa76af0f60dcf0d95c17aa86357598b315d40478dd59c238da0e6f8e /
+# b4f51a5b93e5ac676edb328d7f86b177c009c7e90a11b8a9e444d0f0e0c7739f and quick/full code
+# ed48d5b6884bd4a572cd7315d046b557b2bfd0ea3d1953dd72ee5acfa7458d14 /
+# a181906553cc0960a9e51f02856df3b2bc527fd4a0aad24321d61bd92760f56c. It is still a
+# user-center, chemistry-unverified, application-offline protocol smoke, not production/science.
+# A chemistry_verified=true historical v3 production workflow bound docking-box receipt
+# 641d7aa6fbab3eba685e954989ea0de1d51bbda52875f308d242154b87c3747a, reached SELECTED worker
+# launch, and failed closed because this host denied bubblewrap loopback/network-namespace setup
+# (RTM_NEWADDR not permitted). Its manifest SHA-256 is
+# 730e54551f807ed18896257fa3d2f47ba9da3a930c8bc2b7b8a2c6ebff585746. Before production, require
+# `protbind doctor` runtime_details.worker_network_isolation.status=usable; current measurement is
+# present_but_unusable with probe rc=1. Application offline variables are not OS isolation. Do not
+# disable isolate_network or enable a fixture bypass; rerun on a capable production host.
+# The environment lock can be frozen in the initial command:
+#   protbind case run ... --worker-config configs/protbind-workers.toml \
+#     --vina-environment-lock experiment-results/aiaa-environment.json
+# [workers.select]
+# engine = "vina-quick"
+# argv = ["<absolute-repo>/scripts/aiaa-protbind.sh", "<absolute-repo>/workers/quick_vina_worker.py"]
+# timeout_seconds = 7200
+# isolate_network = true
+# [workers.select.provenance]
+# model_revision = "selection-quick-vina-1.3+autodock-vina-1.2.7+meeko-0.7.1+rdkit-<exact>+gemmi-<exact>+numpy-<exact>+scipy-<exact>"
+# weight_sha256 = "<runtime-assets-64-lowercase-hex-characters>"
+# code_sha256 = "<quick-composite-64-lowercase-hex-characters>"
+# [workers.select.parameters]
+# vina_executable = "<absolute-repo>/tools/bin/vina"
+# meeko_prepare_receptor_executable = "<absolute-repo>/.venv-aiaa-protbind/bin/mk_prepare_receptor.py"
+# meeko_prepare_ligand_executable = "<absolute-repo>/.venv-aiaa-protbind/bin/mk_prepare_ligand.py"
+# vina_version = "1.2.7"
+# meeko_version = "0.7.1"
+# rdkit_version = "<exact-version>"
+# gemmi_version = "<exact-version>"
+# numpy_version = "<exact-version>"
+# scipy_version = "<exact-version>"
+# scoring = "vina"
+# cpu = 1
+# exhaustiveness = 8
+# num_modes = 1
+# energy_range = 3.0
+# command_timeout_seconds = 900
+
+# [workers.dock]
+# engine = "vina"
+# argv = ["<absolute-repo>/scripts/aiaa-protbind.sh", "<absolute-repo>/workers/vina_worker.py"]
+# timeout_seconds = 14400
+# isolate_network = true
+# [workers.dock.provenance]
+# model_revision = "autodock-vina-1.2.7+meeko-0.7.1+rdkit-<exact>+gemmi-<exact>+numpy-<exact>+scipy-<exact>"
+# weight_sha256 = "<runtime-assets-64-lowercase-hex-characters>"
+# code_sha256 = "<composite-64-lowercase-hex-characters>"
+# [workers.dock.parameters]
+# vina_executable = "<absolute-repo>/tools/bin/vina"
+# meeko_prepare_receptor_executable = "<absolute-repo>/.venv-aiaa-protbind/bin/mk_prepare_receptor.py"
+# meeko_prepare_ligand_executable = "<absolute-repo>/.venv-aiaa-protbind/bin/mk_prepare_ligand.py"
+# vina_version = "1.2.7"
+# meeko_version = "0.7.1"
+# rdkit_version = "<exact-version>"
+# gemmi_version = "<exact-version>"
+# numpy_version = "<exact-version>"
+# scipy_version = "<exact-version>"
+# scoring = "vina"
+# cpu = 1
+# exhaustiveness = 32
+# num_modes = 9
+# energy_range = 3.0
+# command_timeout_seconds = 1800
+
+# Concrete offline adapter. In schema 2 the host derives protbind.validation-input-batch from the
+# exact DOCKED bundle and builds the validation-toolchain manifest from installed AIAA packages when
+# those support artifacts are absent. PoseBusters is mandatory and pins dock+redock; sPyRMSD,
+# ProLIF and OpenMM are optional but never silently emulated. model_revision and weight_sha256 both
+# bind the generated toolchain artifact. code_sha256 is the composite adapter + complete
+# src/protbind_agent/**/*.py manifest identity. Configured provenance must exactly equal the
+# locally generated binding. An independent reference pose may be attached only after DOCKED and
+# before VALIDATED; it is marked VALIDATION_ONLY.
+# [workers.validate]
+# engine = "protbind-validation"
+# argv = ["<absolute-repo>/scripts/aiaa-protbind.sh", "<absolute-repo>/workers/validation_worker.py"]
+# timeout_seconds = 7200
+# isolate_network = true
+# [workers.validate.provenance]
+# model_revision = "validation-toolchain:<toolchain-artifact-sha256>"
+# weight_sha256 = "<toolchain-artifact-sha256>"
+# code_sha256 = "<composite-64-lowercase-hex-characters>"
+# [workers.validate.parameters]
+# openmm_max_iterations = 200
+# openmm_max_displacement_angstrom = 1.5
+# For a validation batch that explicitly requests OpenMM HIP, run only after OpenFold exits and
+# reuse the science lane. On the dual-gfx1100 default, do not put OpenMM on HipFire's GPU1.
+# [workers.validate.environment]
+# HIP_VISIBLE_DEVICES = "0"

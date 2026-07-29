@@ -1,0 +1,4 @@
+interface:
+  display_name: "ProtBind Research"
+  short_description: "Run gated local protein-ligand research"
+  default_prompt: "Use $protbind-research to run this local case through one audited stage at a time."

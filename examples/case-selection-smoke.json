@@ -1,0 +1,23 @@
+{
+  "case_id": "public-1crn-automatic-selection-smoke",
+  "title": "1CRN plus ethanol-scale library protocol/environment smoke; no binding-site or activity claim",
+  "mode": "pocket_only",
+  "seed": 20260721,
+  "target": {
+    "name": "crambin-public-selection-smoke",
+    "sequences": ["TTCCPSIVARSNFNVCRLPGTPEAICATYTGCIIIPGATCPGDYAN"],
+    "pdb_id": "1CRN",
+    "rcsb_chain_ids": ["A"]
+  },
+  "pocket": {
+    "center": [10.5935, 10.2105, 6.079],
+    "box_size": [20.0, 20.0, 20.0],
+    "pharmacophore_file": "examples/pocket-query.json"
+  },
+  "privacy": {
+    "network_allowed": false,
+    "approved_domains": [],
+    "sequence_upload_allowed": false,
+    "redact_internal_paths": true
+  }
+}

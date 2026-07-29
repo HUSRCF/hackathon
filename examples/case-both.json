@@ -1,0 +1,24 @@
+{
+  "case_id": "demo-both",
+  "title": "Synthetic RRF protocol fixture; not a scientific result",
+  "mode": "both",
+  "seed": 20260721,
+  "target": {
+    "name": "fixture-target",
+    "sequences": ["ACDEFGHIKLMNPQRSTVWY"]
+  },
+  "ligand": {
+    "pharmacophore_file": "examples/ligand-query.json",
+    "heavy_atom_count": 4
+  },
+  "pocket": {
+    "residues": ["A:1"],
+    "pharmacophore_file": "examples/pocket-query.json"
+  },
+  "privacy": {
+    "network_allowed": false,
+    "approved_domains": [],
+    "sequence_upload_allowed": false,
+    "redact_internal_paths": true
+  }
+}

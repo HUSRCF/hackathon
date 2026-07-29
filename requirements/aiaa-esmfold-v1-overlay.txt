@@ -1,0 +1,6 @@
+# Runtime-only additions inherited on top of AIAA.
+# Deliberately do not list/install torch, ROCm, NumPy, fair-esm, or OmegaConf.
+dm-tree==0.1.10
+ml-collections==1.0.0
+ihm==2.11
+modelcif==0.7

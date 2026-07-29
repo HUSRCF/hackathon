@@ -1,0 +1,6 @@
+# Exact package local to .venv-aiaa-esmfold-v1 on 2026-07-21.
+# Its dependencies are inherited from and attested with AIAA.
+dm-tree==0.1.10
+ml-collections==1.0.0
+ihm==2.11
+modelcif==0.7

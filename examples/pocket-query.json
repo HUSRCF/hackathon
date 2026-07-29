@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0",
+  "fixture_only": true,
+  "heuristic": true,
+  "features": [
+    {"type": "Donor", "position": [1.0, 1.0, 0.0], "atom_indices": [10]},
+    {"type": "Acceptor", "position": [4.0, 1.0, 0.0], "atom_indices": [11]},
+    {"type": "Aromatic", "position": [1.0, 5.0, 0.0], "atom_indices": [12]},
+    {"type": "Hydrophobe", "position": [1.0, 1.0, 5.0], "atom_indices": [13]}
+  ]
+}
