@@ -4,6 +4,7 @@ import json
 
 import pytest
 
+import protbind_agent.mcp_server as mcp_server_module
 from protbind_agent.mcp_server import ProtBindMCPService, create_mcp_server
 from protbind_agent.tripharm import build_jsonl_index
 
@@ -141,6 +142,36 @@ def test_mcp_library_reads_require_explicit_data_confirmation(tmp_path) -> None:
     status = service.library_status(data_access_confirmed=True)
     assert status["configured"] is False
     assert status["absolute_paths_disclosed"] is False
+
+
+def test_knowledge_store_is_lazy_consent_gated_and_reused(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    created = []
+
+    class FakeKnowledgeStore:
+        def __init__(self, root, model_path) -> None:
+            created.append((root, model_path))
+
+    monkeypatch.setattr(
+        mcp_server_module,
+        "SeekDBKnowledgeStore",
+        FakeKnowledgeStore,
+    )
+    model = tmp_path / "model"
+    service = ProtBindMCPService(
+        workspace=tmp_path / "workspace",
+        project_root=tmp_path,
+        knowledge_model=model,
+    )
+
+    with pytest.raises(PermissionError, match="fresh explicit user confirmation"):
+        service._knowledge_store(False)  # noqa: SLF001
+    first = service._knowledge_store(True)  # noqa: SLF001
+    second = service._knowledge_store(True)  # noqa: SLF001
+
+    assert first is second
+    assert created == [(service.workspace, model.resolve())]
 
 
 def test_mcp_server_exposes_only_bounded_domain_tools(tmp_path) -> None:

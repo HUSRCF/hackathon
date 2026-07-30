@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import threading
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -68,6 +69,8 @@ class ProtBindMCPService:
         self.knowledge_model = (
             knowledge_model.resolve() if knowledge_model is not None else None
         )
+        self._knowledge_store_instance: SeekDBKnowledgeStore | None = None
+        self._knowledge_store_lock = threading.Lock()
 
     @staticmethod
     def _require_data_access_confirmation(data_access_confirmed: bool) -> None:
@@ -92,7 +95,13 @@ class ProtBindMCPService:
                 "knowledge retrieval is not configured; an operator must start the MCP "
                 "server with --knowledge-model"
             )
-        return SeekDBKnowledgeStore(self.workspace, self.knowledge_model)
+        with self._knowledge_store_lock:
+            if self._knowledge_store_instance is None:
+                self._knowledge_store_instance = SeekDBKnowledgeStore(
+                    self.workspace,
+                    self.knowledge_model,
+                )
+            return self._knowledge_store_instance
 
     def _project_file(self, value: str, name: str) -> Path:
         if not isinstance(value, str) or not value.strip():

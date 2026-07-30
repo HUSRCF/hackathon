@@ -87,3 +87,100 @@ def test_side_effect_policy_returns_tool_error_to_model() -> None:
     assert not result.ok
     assert "policy allows NONE" in (result.error or "")
 
+
+def test_agent_exposes_only_selected_tools_and_records_schema_size() -> None:
+    backend = MockBackend([ChatResponse(content="done")])
+    other = ToolSpec(
+        name="other",
+        description="An unrelated tool.",
+        parameters={"type": "object", "properties": {}},
+        handler=lambda _arguments: None,
+    )
+    agent = Agent(
+        backend,
+        model="test",
+        tools=ToolRegistry([_add_tool(), other]),
+        tool_schema_selector=lambda _messages, _available: ("add",),
+    )
+
+    result = agent.run("add")
+
+    assert [schema["function"]["name"] for schema in backend.requests[0].tools] == [
+        "add"
+    ]
+    assert result.exposed_tool_names == (("add",),)
+    assert result.exposed_tool_schema_bytes[0] > 0
+
+
+def test_agent_rejects_registered_tool_not_exposed_to_model() -> None:
+    executed = False
+
+    def execute_other(_arguments: dict) -> None:
+        nonlocal executed
+        executed = True
+
+    other = ToolSpec(
+        name="other",
+        description="An unrelated tool.",
+        parameters={"type": "object", "properties": {}},
+        handler=execute_other,
+    )
+    backend = MockBackend(
+        [
+            ChatResponse(
+                content="",
+                tool_calls=(ToolCall(id="hidden", name="other", arguments={}),),
+            ),
+            ChatResponse(content="blocked"),
+        ]
+    )
+    agent = Agent(
+        backend,
+        model="test",
+        tools=ToolRegistry([_add_tool(), other]),
+        tool_schema_selector=lambda _messages, _available: ("add",),
+    )
+
+    result = agent.run("try hidden")
+
+    assert executed is False
+    assert len(result.tool_results) == 1
+    assert result.tool_results[0].name == "other"
+    assert result.tool_results[0].ok is False
+    message = json.loads(backend.requests[1].messages[-1].content or "{}")
+    assert "not exposed" in message["error"]
+
+
+def test_tool_result_view_keeps_full_host_value_but_compacts_model_message() -> None:
+    tool = ToolSpec(
+        name="lookup",
+        description="Return a large result.",
+        parameters={"type": "object", "properties": {}},
+        handler=lambda _arguments: {"full": "value", "artifact_id": "sha256:abc"},
+        result_view=lambda value: {"artifact_id": value["artifact_id"]},
+    )
+
+    result = ToolRegistry([tool]).execute("lookup", {})
+
+    assert result.value == {"full": "value", "artifact_id": "sha256:abc"}
+    assert json.loads(result.as_message_content())["value"] == {
+        "artifact_id": "sha256:abc"
+    }
+
+
+def test_tool_result_view_failure_does_not_relabel_completed_side_effect() -> None:
+    tool = ToolSpec(
+        name="write",
+        description="Complete a write before projection.",
+        parameters={"type": "object", "properties": {}},
+        handler=lambda _arguments: {"written": True},
+        side_effect=SideEffect.LOCAL_WRITE,
+        result_view=lambda _value: 1 / 0,
+    )
+
+    result = ToolRegistry(
+        [tool], max_side_effect=SideEffect.LOCAL_WRITE
+    ).execute("write", {})
+
+    assert result.ok is True
+    assert json.loads(result.as_message_content())["value"] == {"written": True}

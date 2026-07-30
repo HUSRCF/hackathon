@@ -300,6 +300,12 @@ def _build_parser() -> argparse.ArgumentParser:
     agent.add_argument("--knowledge-model", type=Path)
     agent.add_argument("--worker-config", type=Path)
     agent.add_argument("--max-steps", type=int, default=16)
+    agent.add_argument(
+        "--tool-routing",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Use deterministic minimal tool packs; ambiguous requests fall back to all.",
+    )
     agent.add_argument("--json", action="store_true")
     _workspace_argument(agent)
 
@@ -361,6 +367,12 @@ def _build_parser() -> argparse.ArgumentParser:
     agent_benchmark.add_argument("--code-revision", required=True)
     agent_benchmark.add_argument("--repetitions", type=int, default=3)
     agent_benchmark.add_argument("--warmup-runs", type=int, default=1)
+    agent_benchmark.add_argument(
+        "--tool-routing",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Enable deterministic tool routing for a routed-vs-full A/B receipt.",
+    )
     agent_benchmark.add_argument("--output", type=Path, required=True)
     agent_benchmark.add_argument(
         "--confirm-benchmark-data",
@@ -1134,6 +1146,7 @@ def _run(args: argparse.Namespace) -> int:
             knowledge_model=args.knowledge_model,
             pipeline_config=_worker_config(args.worker_config),
             max_steps=args.max_steps,
+            route_tools=args.tool_routing,
         ).run(prompt)
         if args.json:
             print(json.dumps(asdict(result), ensure_ascii=False, indent=2))
@@ -1179,6 +1192,7 @@ def _run(args: argparse.Namespace) -> int:
                 code_revision=args.code_revision,
                 repetitions=args.repetitions,
                 warmup_runs=args.warmup_runs,
+                tool_routing=args.tool_routing,
             ),
             base_url=args.base_url,
         )

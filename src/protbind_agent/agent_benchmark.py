@@ -43,6 +43,7 @@ class AgentBenchmarkConfig:
     code_revision: str
     repetitions: int = 3
     warmup_runs: int = 1
+    tool_routing: bool = True
 
     def __post_init__(self) -> None:
         if self.repetitions < 3:
@@ -466,6 +467,7 @@ def run_agent_benchmark(
             backend=backend,
             max_steps=16,
             stream=True,
+            route_tools=config.tool_routing,
         )
         return runtime.run(prompt)
 
@@ -497,6 +499,8 @@ def run_agent_benchmark(
                         "end_to_end_model_tokens_per_second": None,
                         "post_first_model_tokens_per_second": None,
                         "tool_calls": trace,
+                        "exposed_tool_names": (),
+                        "exposed_tool_schema_bytes": (),
                         "tool_success_rate": 0.0,
                         "required_tool_sequence_passed": False,
                         "artifact_citation_present": False,
@@ -580,6 +584,9 @@ def run_agent_benchmark(
                         post_first_tokens_per_second
                     ),
                     "tool_calls": called,
+                    "exposed_tool_names": result.exposed_tool_names,
+                    "exposed_tool_schema_bytes": result.exposed_tool_schema_bytes,
+                    "tool_routes": result.tool_routes,
                     "tool_success_rate": tool_success_rate,
                     "tool_timeline": result.tool_timeline,
                     "required_tool_sequence_passed": required_success,
@@ -616,6 +623,16 @@ def run_agent_benchmark(
         float(item["post_first_model_tokens_per_second"])
         for item in results
         if item["post_first_model_tokens_per_second"] is not None
+    ]
+    first_schema_byte_values = [
+        float(item["exposed_tool_schema_bytes"][0])
+        for item in results
+        if item["exposed_tool_schema_bytes"]
+    ]
+    first_tool_count_values = [
+        float(len(item["exposed_tool_names"][0]))
+        for item in results
+        if item["exposed_tool_names"]
     ]
     try:
         torch_version = importlib.metadata.version("torch")
@@ -686,6 +703,8 @@ def run_agent_benchmark(
             "post_first_model_tokens_per_second": _summary(
                 post_first_throughput_values
             ),
+            "first_model_exposed_tool_count": _summary(first_tool_count_values),
+            "first_model_tool_schema_bytes": _summary(first_schema_byte_values),
         },
         "scientific_semantics": (
             "Measures local Agent inference/tool orchestration only. It is not docking "

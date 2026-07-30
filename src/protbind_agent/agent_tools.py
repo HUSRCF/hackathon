@@ -9,13 +9,21 @@ from typing import Any
 
 from radeon_agent.tools import SideEffect, ToolPermissionError, ToolRegistry, ToolSpec
 
+from .agent_views import (
+    compact_case_advance,
+    compact_case_status,
+    compact_knowledge_search,
+    compact_memory_write,
+)
 from .experience import ExperienceStore
 from .mcp_server import ProtBindMCPService
+from .plan_ahead import ShadowPlan, build_shadow_plan, digest_arguments
 
 
 @dataclass(frozen=True, slots=True)
 class ActionPreview:
     tool: str
+    arguments_sha256: str
     reads: tuple[str, ...]
     writes: tuple[str, ...]
     network: str
@@ -32,6 +40,7 @@ class ToolAuditEvent:
     duration_seconds: float
     ok: bool
     error_type: str | None
+    shadow_plan_id: str | None = None
 
 
 ConfirmationCallback = Callable[[ActionPreview], bool]
@@ -74,6 +83,7 @@ class ProtBindAgentTools:
         self.confirmation = confirmation
         self.experience = ExperienceStore(service.workspace, service.workflow)
         self.audit_events: list[ToolAuditEvent] = []
+        self.shadow_plans: list[ShadowPlan] = []
 
     def _handler(
         self,
@@ -86,10 +96,14 @@ class ProtBindAgentTools:
         def execute(arguments: dict[str, Any]) -> Any:
             started = time.monotonic()
             confirmed = preview is None
+            shadow_plan: ShadowPlan | None = None
             try:
                 values = dict(arguments)
                 if preview is not None:
-                    confirmed = self.confirmation(preview(values))
+                    action_preview = preview(values)
+                    shadow_plan = build_shadow_plan(action_preview)
+                    self.shadow_plans.append(shadow_plan)
+                    confirmed = self.confirmation(action_preview)
                     if not confirmed:
                         raise ToolPermissionError(
                             f"user declined or did not confirm tool {name!r}"
@@ -106,6 +120,9 @@ class ProtBindAgentTools:
                         duration_seconds=time.monotonic() - started,
                         ok=False,
                         error_type=type(exc).__name__,
+                        shadow_plan_id=(
+                            shadow_plan.plan_id if shadow_plan is not None else None
+                        ),
                     )
                 )
                 raise
@@ -117,6 +134,9 @@ class ProtBindAgentTools:
                     duration_seconds=time.monotonic() - started,
                     ok=True,
                     error_type=None,
+                    shadow_plan_id=(
+                        shadow_plan.plan_id if shadow_plan is not None else None
+                    ),
                 )
             )
             return result
@@ -137,6 +157,7 @@ class ProtBindAgentTools:
         def build(_arguments: dict[str, Any]) -> ActionPreview:
             return ActionPreview(
                 tool=tool,
+                arguments_sha256=digest_arguments(_arguments),
                 reads=reads,
                 writes=writes,
                 network=network,
@@ -163,6 +184,7 @@ class ProtBindAgentTools:
                 "Deep-audit one run and return its fresh one-stage continuation gate.",
                 _object(run, required=("run_id",)),
                 self._handler("case_status", self.service.case_status),
+                result_view=compact_case_status,
             ),
             ToolSpec(
                 "case_report",
@@ -298,6 +320,7 @@ class ProtBindAgentTools:
                     ),
                 ),
                 SideEffect.LOCAL_WRITE,
+                result_view=compact_case_advance,
             ),
             ToolSpec(
                 "case_attach_support",
@@ -432,6 +455,7 @@ class ProtBindAgentTools:
                     ),
                     inject_data_confirmation=True,
                 ),
+                result_view=compact_knowledge_search,
             ),
             ToolSpec(
                 "library_rag_sync",
@@ -479,6 +503,7 @@ class ProtBindAgentTools:
                     ),
                 ),
                 SideEffect.LOCAL_WRITE,
+                result_view=compact_memory_write,
             ),
         )
         return (*read_only, *confirmed)
@@ -488,3 +513,6 @@ class ProtBindAgentTools:
 
     def audit_dicts(self) -> list[dict[str, Any]]:
         return [asdict(event) for event in self.audit_events]
+
+    def shadow_plan_dicts(self) -> list[dict[str, Any]]:
+        return [plan.to_dict() for plan in self.shadow_plans]

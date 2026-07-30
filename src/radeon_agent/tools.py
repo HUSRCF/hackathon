@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable, Iterable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import IntEnum
 from typing import Any
 
@@ -34,6 +34,7 @@ class ToolSpec:
     parameters: dict[str, Any]
     handler: Callable[[dict[str, Any]], Any]
     side_effect: SideEffect = SideEffect.NONE
+    result_view: Callable[[Any], Any] | None = None
 
     def to_openai(self) -> dict[str, Any]:
         return {
@@ -52,10 +53,13 @@ class ToolResult:
     ok: bool
     value: Any = None
     error: str | None = None
+    message_value: Any = field(default=None)
+    has_message_value: bool = False
 
     def as_message_content(self) -> str:
+        value = self.message_value if self.has_message_value else self.value
         return json.dumps(
-            {"ok": self.ok, "value": self.value, "error": self.error},
+            {"ok": self.ok, "value": value, "error": self.error},
             ensure_ascii=False,
             default=str,
             separators=(",", ":"),
@@ -127,8 +131,24 @@ class ToolRegistry:
             raise ValueError(f"tool already registered: {tool.name}")
         self._tools[tool.name] = tool
 
-    def schemas(self) -> tuple[dict[str, Any], ...]:
-        return tuple(tool.to_openai() for tool in self._tools.values())
+    def names(self) -> tuple[str, ...]:
+        return tuple(self._tools)
+
+    def schemas(
+        self,
+        names: Iterable[str] | None = None,
+    ) -> tuple[dict[str, Any], ...]:
+        if names is None:
+            selected = self.names()
+        else:
+            requested = tuple(dict.fromkeys(names))
+            unknown = sorted(set(requested) - set(self._tools))
+            if unknown:
+                raise ValueError(
+                    "unknown tool schema selection: " + ", ".join(unknown)
+                )
+            selected = tuple(name for name in self._tools if name in requested)
+        return tuple(self._tools[name].to_openai() for name in selected)
 
     def execute(self, name: str, arguments: dict[str, Any]) -> ToolResult:
         tool = self._tools.get(name)
@@ -141,7 +161,20 @@ class ToolRegistry:
                     f"policy allows {self.max_side_effect.name}"
                 )
             validate_arguments(tool.parameters, arguments)
-            return ToolResult(name=name, ok=True, value=tool.handler(arguments))
+            value = tool.handler(arguments)
+            if tool.result_view is None:
+                return ToolResult(name=name, ok=True, value=value)
+            try:
+                message_value = tool.result_view(value)
+            except Exception:  # projection failure must not relabel completed tool work
+                return ToolResult(name=name, ok=True, value=value)
+            return ToolResult(
+                name=name,
+                ok=True,
+                value=value,
+                message_value=message_value,
+                has_message_value=True,
+            )
         except (ToolError, ValueError, TypeError) as exc:
             return ToolResult(name=name, ok=False, error=str(exc))
         except Exception as exc:  # tool boundary: never crash the Agent loop

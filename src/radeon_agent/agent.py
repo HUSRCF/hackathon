@@ -2,13 +2,20 @@
 
 from __future__ import annotations
 
+import json
 import time
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from typing import Any
 
 from .backends.base import LLMBackend
 from .models import ChatRequest, Message, StreamTiming, Usage
-from .tools import ToolRegistry
+from .tools import ToolRegistry, ToolResult
+
+ToolSchemaSelector = Callable[
+    [tuple[Message, ...], tuple[str, ...]],
+    Iterable[str],
+]
 
 DEFAULT_SYSTEM_PROMPT = """You are a private local assistant running on an AMD Radeon GPU.
 Use only the provided tools. Never invent a tool result. Ask before irreversible or external
@@ -38,6 +45,8 @@ class AgentResult:
     model_timings: tuple[StreamTiming, ...] = ()
     model_usages: tuple[Usage, ...] = ()
     tool_results: tuple[ToolExecution, ...] = ()
+    exposed_tool_names: tuple[tuple[str, ...], ...] = ()
+    exposed_tool_schema_bytes: tuple[int, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -65,6 +74,7 @@ class Agent:
         max_tokens: int = 2048,
         stream: bool = False,
         request_extra: dict[str, Any] | None = None,
+        tool_schema_selector: ToolSchemaSelector | None = None,
     ) -> None:
         if max_steps < 1:
             raise ValueError("max_steps must be >= 1")
@@ -79,6 +89,7 @@ class Agent:
         self.max_tokens = max_tokens
         self.stream = stream
         self.request_extra = dict(request_extra or {})
+        self.tool_schema_selector = tool_schema_selector
 
     def run(self, user_input: str) -> AgentResult:
         if not user_input.strip():
@@ -94,6 +105,8 @@ class Agent:
         model_usages: list[Usage] = []
         tool_call_trace: list[tuple[str, ...]] = []
         tool_results: list[ToolExecution] = []
+        exposed_tool_names: list[tuple[str, ...]] = []
+        exposed_tool_schema_bytes: list[int] = []
 
         for model_calls in range(1, self.max_steps + 1):
             if time.monotonic() - start > self.timeout_seconds:
@@ -101,12 +114,42 @@ class Agent:
                     "agent timeout exceeded",
                     tool_call_trace=tuple(tool_call_trace),
                 )
+            available_tools = self.tools.names()
+            requested_tools = (
+                tuple(
+                    dict.fromkeys(
+                        self.tool_schema_selector(tuple(messages), available_tools)
+                    )
+                )
+                if self.tool_schema_selector is not None
+                else available_tools
+            )
+            unknown_tools = sorted(set(requested_tools) - set(available_tools))
+            if unknown_tools:
+                raise ValueError(
+                    "tool schema selector returned unknown tools: "
+                    + ", ".join(unknown_tools)
+                )
+            selected_tools = tuple(
+                name for name in available_tools if name in requested_tools
+            )
+            schemas = self.tools.schemas(selected_tools)
+            exposed_tool_names.append(selected_tools)
+            exposed_tool_schema_bytes.append(
+                len(
+                    json.dumps(
+                        schemas,
+                        ensure_ascii=False,
+                        separators=(",", ":"),
+                    ).encode("utf-8")
+                )
+            )
             request = ChatRequest(
                 model=self.model,
                 messages=tuple(messages),
                 temperature=0.0,
                 max_tokens=self.max_tokens,
-                tools=self.tools.schemas(),
+                tools=schemas,
                 extra=self.request_extra,
             )
             if self.stream:
@@ -143,11 +186,22 @@ class Agent:
                     model_timings=tuple(model_timings),
                     model_usages=tuple(model_usages),
                     tool_results=tuple(tool_results),
+                    exposed_tool_names=tuple(exposed_tool_names),
+                    exposed_tool_schema_bytes=tuple(exposed_tool_schema_bytes),
                 )
 
             for call in response.tool_calls:
                 tool_call_count += 1
-                result = self.tools.execute(call.name, call.arguments)
+                if call.name not in selected_tools:
+                    result = ToolResult(
+                        name=call.name,
+                        ok=False,
+                        error=(
+                            f"tool {call.name!r} was not exposed for this model turn"
+                        ),
+                    )
+                else:
+                    result = self.tools.execute(call.name, call.arguments)
                 tool_results.append(ToolExecution(name=call.name, ok=result.ok))
                 messages.append(
                     Message(

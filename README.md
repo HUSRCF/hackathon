@@ -217,6 +217,12 @@ bootstrap，不能进入 Radeon 性能证据。
 白名单。只读状态/报告工具无需确认；联网、创建/推进案例、附件、私有库、知识导入/RAG 同步和经验
 写入每次都显示读/写/网络/科学状态影响及恢复方式，并要求新的确认。`case_advance` 仍必须消费刚由
 `case_status` 签发的一次性 continuation token，且一次只推进一个阶段。
+Agent 默认用确定性 Tool Pack 只向模型暴露高置信相关 schema；模糊请求退回完整白名单，已注册但
+本轮未暴露的工具调用会被 host 拒绝。等待确认时同时生成不含原始参数、私有数据或 token 的
+hash-bound ShadowPlan，只罗列可取消的条件分支和 UI/report 准备工作，不提前执行网络、读取或状态
+写入。协议、威胁模型和性能验收见
+[ShadowPlan Spotlight](DOCs/PROTBIND_SHADOWPLAN_SPOTLIGHT.md)；可用
+`--no-tool-routing` 生成完整 schema 的对照运行。
 
 `memory_write` 不接受模型提供候选、分数或结论。它只从深审计通过的 `REPORTED` manifest
 确定性派生 experience artifact；检索投影只能作为历史提示，不会自动改变 box、seed、筛选阈值或

@@ -14,8 +14,10 @@ from radeon_agent.agent import Agent, AgentResult
 from radeon_agent.backends import HipFireBackend
 from radeon_agent.backends.base import LLMBackend
 
+from .agent_routing import ProtBindToolRouter
 from .agent_tools import ActionPreview, ConfirmationCallback, ProtBindAgentTools
 from .mcp_server import ProtBindMCPService
+from .plan_ahead import build_shadow_plan
 from .workflow import PipelineConfig
 
 PROTBIND_AGENT_SYSTEM_PROMPT = """You are the local private ProtBind research Agent.
@@ -61,6 +63,10 @@ class ProtBindAgentResult:
     validated_artifact_citations: tuple[str, ...]
     citation_warnings: tuple[str, ...]
     tool_timeline: tuple[dict[str, Any], ...]
+    exposed_tool_names: tuple[tuple[str, ...], ...]
+    exposed_tool_schema_bytes: tuple[int, ...]
+    tool_routes: tuple[dict[str, object], ...]
+    shadow_plans: tuple[dict[str, Any], ...]
 
 
 class TerminalConfirmation:
@@ -76,9 +82,17 @@ class TerminalConfirmation:
         self.output_stream = output_stream
 
     def __call__(self, preview: ActionPreview) -> bool:
+        shadow_plan = build_shadow_plan(preview)
         self.output_stream.write(
             "\nProtBind confirmation required:\n"
-            + json.dumps(asdict(preview), ensure_ascii=False, indent=2)
+            + json.dumps(
+                {
+                    "action": asdict(preview),
+                    "shadow_plan": shadow_plan.to_dict(),
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
             + "\nApprove this one tool call? [y/N] "
         )
         self.output_stream.flush()
@@ -98,8 +112,10 @@ class ProtBindAgentRuntime:
         timeout_seconds: float = 1800.0,
         max_tokens: int = 4096,
         stream: bool = True,
+        route_tools: bool = True,
     ) -> None:
         self.tools = ProtBindAgentTools(service, confirmation=confirmation)
+        self.tool_router = ProtBindToolRouter()
         self.agent = Agent(
             backend,
             model=model,
@@ -112,6 +128,7 @@ class ProtBindAgentRuntime:
             request_extra={
                 "chat_template_kwargs": {"enable_thinking": False},
             },
+            tool_schema_selector=self.tool_router if route_tools else None,
         )
 
     def run(self, prompt: str) -> ProtBindAgentResult:
@@ -159,6 +176,10 @@ class ProtBindAgentRuntime:
                 else ()
             ),
             tool_timeline=tuple(self.tools.audit_dicts()),
+            exposed_tool_names=result.exposed_tool_names,
+            exposed_tool_schema_bytes=result.exposed_tool_schema_bytes,
+            tool_routes=tuple(self.tool_router.decision_dicts()),
+            shadow_plans=tuple(self.tools.shadow_plan_dicts()),
         )
 
 
@@ -175,6 +196,7 @@ def create_runtime(
     backend: LLMBackend | None = None,
     max_steps: int = 16,
     stream: bool = True,
+    route_tools: bool = True,
 ) -> ProtBindAgentRuntime:
     require_loopback_hipfire_url(base_url)
     service = ProtBindMCPService(
@@ -191,4 +213,5 @@ def create_runtime(
         confirmation=confirmation or TerminalConfirmation(),
         max_steps=max_steps,
         stream=stream,
+        route_tools=route_tools,
     )
