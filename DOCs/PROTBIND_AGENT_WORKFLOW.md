@@ -355,13 +355,15 @@ continuation token 绑定 run、完整 manifest SHA-256、下一阶段和控制�
 - `COMPLETE`：全部主阶段已有 accepted record。
 
 本地 MCP 提供 doctor、受约束 public-data fetch、case create/status/advance/attach/report/dossier/
-pose-view、artifact metadata 和 control history；不提供 shell、任意文件内容、原始坐标或开放
+pose-view、artifact metadata、control history，以及只操作预配置别名/incoming 的六个私有库
+工具；不提供 shell、任意文件内容、原始坐标或开放
 网络。public-data fetch 是唯一网络工具，只接受白名单 source、公开 identifier、精确批准域名和
 项目内目的路径，不会 attach 或推进阶段。`case_dossier` 区分
 stage record 与 postflight acceptance，`case_pose_view` 只返回无坐标的 artifact/验证/box/几何
 QA 摘要；两者都不能修改 manifest 或推进阶段。所有路径必须位于 project root，network-enabled case
 也会被 MCP create 拒绝。OpenCode 项目配置只启用本地 HipFire 与该 MCP，mutating tools 均为
-`ask`，其他工具默认 `deny`。MCP 1.14 的 AIAA stdio 已完成真实 initialize/list-tools 握手；OpenCode
+`ask`，私有库连读取也要求 `ask` 加工具内 fresh consent，其他工具默认 `deny`。MCP 1.14 的 AIAA
+stdio 已完成真实 initialize/list-tools 握手；OpenCode
 可执行文件和 HipFire 对话尚未在当前宿主实跑，因此这只是协议/权限闭环证据，不是完整交互 demo。
 
 ## 5. 失败和降级矩阵
@@ -406,13 +408,15 @@ ESMFold v1 的 24 aa 本机 smoke 峰值约 7.91 GiB，但这不是 700 aa 上�
 | TriPharm CPU、三模式/RRF | 已实现；三模式 protocol smoke 到 `SCREENED` |
 | persisted-index TriPharm HIP top 512 | kernel microbenchmark 已通过；完整 backend 待接 |
 | schema-2 main state / optional cofold task | 已实现；schema 1 只读，DOCKED 不再依赖 cofold |
-| scaffold/microstate/quick-Vina selection | config 2.5/profile 1.3/input producer 1.2/box receipt 2.0、原子重叠 coordinate-frame plausibility 门、独立 site-derivation evidence、known-site calibration consumer、全谱系、自动 CPU-only worker、精确 success/failure 覆盖、完整输出闭包、缓存恢复和 top-16 finalizer 已实现；v4 direct smoke 为 3/3、36-entry closure，但仅 application-offline/unverified-chemistry；历史 verified-chemistry production run 在 bubblewrap namespace 建立处 fail closed，生产隔离仍待重跑；fpocket/P2Rank 待接 |
+| scaffold/microstate/quick-Vina selection | config 2.5/profile 1.3/input producer 1.2/box receipt 2.0、原子重叠 coordinate-frame plausibility 门、独立 site-derivation evidence、known-site calibration consumer、全谱系、自动 CPU-only worker、精确 success/failure 覆盖、完整输出闭包、缓存恢复和 top-16 finalizer 已实现；v4 direct smoke 为 3/3、36-entry closure，但仅 application-offline/unverified-chemistry；历史 verified-chemistry production run 在 bubblewrap namespace 建立处 fail closed；P2Rank 受控 CLI/CSV hypothesis adapter 已接，fpocket/P2Rank 共识与自动 box 调度待接 |
 | evidence-grade Vina | worker 可直接消费 SELECTED；规范 SDF、原始 PDBQT 和逐候选失败均已绑定 |
 | OpenFold3 | 官方 ROCm runtime validator 通过；checkpoint/真实 inference 未运行；仅有 cofold batch 验证器，无公开 batch builder/CLI，保持专家导入的可选旁路 |
 | validation | docking-derived batch/toolchain、pose/receptor attestation 已实现；原始 fixed-ten 为 8 completed/2 failed、top-1/top-5 7/10；`repair-protocol-v1` 为 9 completed/1 failed、独立 8/10；`repair-protocol-v2-restrained-sidechain` 为 10/10 completed、独立 top-1/top-5 9/10、IFP mean/median 0.6598/0.7014、`gate_complete=true`；三版结果分别保留，v2 仍是已观察 holdout 上的受控修订 |
 | deterministic report | 最终 Markdown/HTML 已实现；任意 checkpoint 的 JSON/Markdown/HTML run dossier 已接，区分 computed 与 accepted |
 | seekdb/BGE-M3 | adapter 和本地权重门已实现；完整资料集需显式导入 |
-| HipFire/OpenCode/PowerMem | 受限 stdio MCP、逐阶段 gate/acceptance receipt、OpenCode default-deny 配置和 project skill 已实现，MCP 1.14 握手通过；OpenCode executable/HipFire TUI 实跑与 PowerMem 仍待完成 |
+| 私有 protein/ligand library | 独立用户根目录、SHA-256 CAS、SQLite catalog、scan/apply 收据、copy/move 二次确认、QC/quarantine、UniProt accession-only 本地比对、完整 CLI、六个 ask-only MCP 工具与 project skill 已实现 |
+| P2Rank / DrutAI | P2Rank 受控运行与 CSV hypothesis parser 已实现，尚未进入 fpocket 共识主链；DrutAI 因环境/许可证/模型 provenance/bake-off 门禁保持 annotation-only 且默认禁用 |
+| HipFire/OpenCode/PowerMem | 受限 stdio MCP、逐阶段 gate/acceptance receipt、OpenCode default-deny 配置和 research/library project skills 已实现，MCP 1.14 握手通过；OpenCode executable/HipFire TUI 实跑与 PowerMem 仍待完成 |
 | 六页 Web UI | 已接真实 run dossier、pose 列表、loopback receptor/ligand view、box/pocket styles 和浏览器 PNG；3Dmol.js 2.5.4 有固定 URL/SHA-256/许可证安装器，仍待公开真实复合物浏览器验收 |
 
 下一组实现应按以下顺序进行：

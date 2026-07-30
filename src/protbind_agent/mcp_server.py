@@ -18,6 +18,7 @@ from .dossier import (
     dossier_content,
     persist_run_dossier,
 )
+from .library import LibraryManager, load_library_config
 from .models import ArtifactRef
 from .pose_view import build_pose_scene_summary
 from .public_data import (
@@ -45,11 +46,33 @@ class ProtBindMCPService:
         workspace: Path,
         project_root: Path,
         config: PipelineConfig | None = None,
+        library_config: Path | None = None,
     ) -> None:
         self.workspace = workspace.resolve()
         self.project_root = project_root.resolve()
         self.workflow = ProtBindWorkflow(self.workspace, config=config)
         self.controller = StageGateController(self.workflow)
+        self.library = (
+            LibraryManager(load_library_config(library_config))
+            if library_config is not None and library_config.is_file()
+            else None
+        )
+
+    @staticmethod
+    def _require_data_access_confirmation(data_access_confirmed: bool) -> None:
+        if data_access_confirmed is not True:
+            raise PermissionError(
+                "private library access requires a fresh explicit user confirmation"
+            )
+
+    def _library(self, data_access_confirmed: bool) -> LibraryManager:
+        self._require_data_access_confirmation(data_access_confirmed)
+        if self.library is None:
+            raise RuntimeError(
+                "private libraries are not configured; an operator must start the MCP "
+                "server with --library-config"
+            )
+        return self.library
 
     def _project_file(self, value: str, name: str) -> Path:
         if not isinstance(value, str) or not value.strip():
@@ -301,6 +324,115 @@ class ProtBindMCPService:
         self.workflow.manifests.load(run_id)
         return self.controller.store.read(run_id)
 
+    def library_status(self, *, data_access_confirmed: bool) -> dict[str, Any]:
+        """Inspect only preconfigured library aliases after explicit user consent."""
+
+        if self.library is None:
+            self._require_data_access_confirmation(data_access_confirmed)
+            return {
+                "configured": False,
+                "next_operator_action": (
+                    "Run protbind library init, then add --library-config to MCP serve."
+                ),
+                "absolute_paths_disclosed": False,
+            }
+        return {"configured": True, **self._library(data_access_confirmed).status()}
+
+    def library_list(
+        self,
+        *,
+        kind: str,
+        data_access_confirmed: bool,
+        state: str | None = None,
+        limit: int = 100,
+    ) -> dict[str, Any]:
+        """List path-redacted entries in one preconfigured library."""
+
+        return self._library(data_access_confirmed).list_entries(
+            kind, state=state, limit=limit
+        )
+
+    def library_show(
+        self,
+        *,
+        kind: str,
+        entry_id: str,
+        data_access_confirmed: bool,
+    ) -> dict[str, Any]:
+        """Show bounded QC and identity metadata, never source file bytes."""
+
+        return self._library(data_access_confirmed).show_entry(kind, entry_id)
+
+    def library_plan_import(
+        self,
+        *,
+        kind: str,
+        data_access_confirmed: bool,
+        recursive: bool = False,
+        max_files: int = 10_000,
+    ) -> dict[str, Any]:
+        """Plan only from the configured incoming directory; arbitrary paths are absent."""
+
+        plan = self._library(data_access_confirmed).scan_incoming(
+            kind,
+            recursive=recursive,
+            max_files=max_files,
+        )
+        return {
+            "plan_id": plan["plan_id"],
+            "kind": kind,
+            "file_count": len(plan["files"]),
+            "skipped": plan["skipped"],
+            "semantics": plan["semantics"],
+            "source_path_disclosed": False,
+            "requires_separate_apply_confirmation": True,
+        }
+
+    def library_apply_import(
+        self,
+        *,
+        kind: str,
+        plan_id: str,
+        data_access_confirmed: bool,
+        mode: str = "copy",
+        confirm_move: str | None = None,
+    ) -> dict[str, Any]:
+        """Apply one hash-bound plan; move requires the exact plan ID again."""
+
+        return self._library(data_access_confirmed).apply_saved(
+            kind,
+            plan_id,
+            mode=mode,
+            confirm_move=confirm_move,
+        )
+
+    def library_verify_uniprot(
+        self,
+        *,
+        entry_id: str,
+        accession: str,
+        approved_domain: str,
+        data_access_confirmed: bool,
+    ) -> dict[str, Any]:
+        """Verify via accession-only UniProt lookup; no private sequence is uploaded."""
+
+        manager = self._library(data_access_confirmed)
+        fetcher = PublicDataFetcher(self.workspace)
+        result = fetcher.fetch(
+            source="uniprot-fasta",
+            identifier=accession,
+            approved_domains=(approved_domain,),
+            run_propka=False,
+        )
+        verification = manager.verify_uniprot_bytes(
+            entry_id,
+            accession,
+            fetcher.artifacts.read_bytes(result.artifact),
+            source_artifact=result.artifact,
+        )
+        verification["network_receipt"] = result.receipt.to_dict()
+        return verification
+
 
 def create_mcp_server(service: ProtBindMCPService) -> Any:
     try:
@@ -337,6 +469,18 @@ def create_mcp_server(service: ProtBindMCPService) -> Any:
     )
     server.tool(name="control_history", structured_output=True)(
         service.control_history
+    )
+    server.tool(name="library_status", structured_output=True)(service.library_status)
+    server.tool(name="library_list", structured_output=True)(service.library_list)
+    server.tool(name="library_show", structured_output=True)(service.library_show)
+    server.tool(name="library_plan_import", structured_output=True)(
+        service.library_plan_import
+    )
+    server.tool(name="library_apply_import", structured_output=True)(
+        service.library_apply_import
+    )
+    server.tool(name="library_verify_uniprot", structured_output=True)(
+        service.library_verify_uniprot
     )
 
     @server.resource(
@@ -458,6 +602,7 @@ def serve_mcp(
     workspace: Path,
     project_root: Path,
     config: PipelineConfig | None = None,
+    library_config: Path | None = None,
     transport: str = "stdio",
 ) -> None:
     if transport != "stdio":
@@ -472,6 +617,7 @@ def serve_mcp(
         workspace=workspace,
         project_root=project_root,
         config=config,
+        library_config=library_config,
     )
     server = create_mcp_server(service)
 

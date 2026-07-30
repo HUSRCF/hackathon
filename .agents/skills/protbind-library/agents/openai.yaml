@@ -1,0 +1,4 @@
+interface:
+  display_name: "ProtBind Library"
+  short_description: "Safely manage private protein and ligand libraries"
+  default_prompt: "Use $protbind-library to inspect or import my protein and ligand files with explicit data-access confirmation."

@@ -15,6 +15,11 @@
 - Treat OpenFold3, when separately configured, as optional protein-small-molecule pose evidence.
   Its confidence is model confidence, not binding affinity or observed binding.
 - Treat TriPharm as a geometric pharmacophore screen. Its score is not an affinity.
+- Treat P2Rank output as a ranked binding-site hypothesis. A predicted pocket or calibrated model
+  probability is not an observed site and must still pass coordinate, box, and docking gates.
+- Treat DrutAI, if a separately pinned worker later passes its compatibility/license/model-card
+  bake-off, as an annotation-only protein/SMILES classifier. It must not hard-filter candidates or
+  count as binding, affinity, activity, pose, or validation evidence.
 - Treat Vina as a pose generator and tool score. Never call its score experimental binding free
   energy, potency, or activity.
 - Require PoseBusters validity before a pose can enter positive evidence. Use symmetry-aware RMSD

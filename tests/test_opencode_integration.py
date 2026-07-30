@@ -33,6 +33,16 @@ def test_opencode_configuration_is_local_and_default_deny() -> None:
     assert config["permission"]["protbind_case_advance"] == "ask"
     assert config["permission"]["protbind_case_create"] == "ask"
     assert config["permission"]["protbind_case_attach_support"] == "ask"
+    for name in (
+        "protbind_library_status",
+        "protbind_library_list",
+        "protbind_library_show",
+        "protbind_library_plan_import",
+        "protbind_library_apply_import",
+        "protbind_library_verify_uniprot",
+    ):
+        assert config["permission"][name] == "ask"
+    assert config["permission"]["skill"]["protbind-library"] == "allow"
 
 
 def test_opencode_mcp_uses_aiaa_stdio_and_no_worker_placeholders() -> None:
@@ -50,6 +60,7 @@ def test_opencode_mcp_uses_aiaa_stdio_and_no_worker_placeholders() -> None:
     ]
     assert "serve" in command
     assert "--worker-config" not in command
+    assert command[-2:] == ["--library-config", ".protbind/library.json"]
     assert mcp["environment"] == {
         "HF_HUB_OFFLINE": "1",
         "TRANSFORMERS_OFFLINE": "1",
@@ -70,6 +81,23 @@ def test_project_skill_declares_only_portable_frontmatter() -> None:
     assert keys == {"name", "description"}
     assert "Call `protbind_case_status` before every attempted advance." in skill
     assert "Never auto-retry a failure." in skill
+
+
+def test_library_skill_requires_fresh_consent_and_no_arbitrary_paths() -> None:
+    skill = (
+        REPOSITORY_ROOT / ".agents/skills/protbind-library/SKILL.md"
+    ).read_text(encoding="utf-8")
+    frontmatter = skill.split("---", maxsplit=2)[1]
+    keys = {
+        line.split(":", maxsplit=1)[0].strip()
+        for line in frontmatter.splitlines()
+        if ":" in line
+    }
+
+    assert keys == {"name", "description"}
+    assert "fresh confirmation" in skill
+    assert "cannot browse an arbitrary source path" in skill
+    assert "Default to `mode=copy`" in skill
 
 
 def test_deepseek_opencode_override_is_explicit_and_secret_free() -> None:

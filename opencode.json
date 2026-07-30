@@ -32,7 +32,7 @@
       "description": "Operate ProtBind through audited one-stage scientific gates",
       "mode": "primary",
       "temperature": 0.1,
-      "prompt": "Load the protbind-research skill before acting. Use only the ProtBind MCP tools. Recheck the gate before every mutation, advance exactly one stage per fresh token, and never invent scientific outputs."
+      "prompt": "Load the protbind-research skill before acting and load protbind-library for reusable data operations. Use only the ProtBind MCP tools. Ask before every private-library data access, recheck the gate before every case mutation, advance exactly one stage per fresh token, and never invent scientific outputs."
     }
   },
   "mcp": {
@@ -47,7 +47,9 @@
         "--workspace",
         "artifacts/protbind",
         "--project-root",
-        "."
+        ".",
+        "--library-config",
+        ".protbind/library.json"
       ],
       "cwd": ".",
       "enabled": true,
@@ -62,7 +64,8 @@
     "*": "deny",
     "skill": {
       "*": "deny",
-      "protbind-research": "allow"
+      "protbind-research": "allow",
+      "protbind-library": "allow"
     },
     "question": "allow",
     "protbind_doctor": "allow",
@@ -75,6 +78,12 @@
     "protbind_fetch_public_data": "ask",
     "protbind_case_create": "ask",
     "protbind_case_advance": "ask",
-    "protbind_case_attach_support": "ask"
+    "protbind_case_attach_support": "ask",
+    "protbind_library_status": "ask",
+    "protbind_library_list": "ask",
+    "protbind_library_show": "ask",
+    "protbind_library_plan_import": "ask",
+    "protbind_library_apply_import": "ask",
+    "protbind_library_verify_uniprot": "ask"
   }
 }

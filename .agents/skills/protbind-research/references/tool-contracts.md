@@ -21,6 +21,23 @@ described below.
   return metadata only.
 - `protbind_control_history(run_id)`: return content-addressed gate/acceptance receipt references.
 
+Private-library tools are intentionally permissioned as `ask`, including reads. Every call also
+requires `data_access_confirmed=true` after a fresh user confirmation:
+
+- `protbind_library_status(data_access_confirmed)`: path-redacted configured root IDs, catalog
+  counts, and bounded incoming counts.
+- `protbind_library_list(kind, data_access_confirmed, state?, limit?)`: bounded catalog metadata.
+- `protbind_library_show(kind, entry_id, data_access_confirmed)`: QC, verification, and artifact
+  references without bytes or absolute paths.
+- `protbind_library_plan_import(kind, data_access_confirmed, recursive?, max_files?)`: hash only
+  the configured library's `incoming/` selection and freeze a plan. It accepts no path.
+- `protbind_library_apply_import(kind, plan_id, data_access_confirmed, mode=copy,
+  confirm_move?)`: recheck and apply a plan. Move requires the exact plan ID again and deletes only
+  after CAS hash verification.
+- `protbind_library_verify_uniprot(entry_id, accession, approved_domain,
+  data_access_confirmed)`: accession-only lookup at `rest.uniprot.org`, followed by local sequence
+  comparison. It never uploads the private sequence.
+
 ## Mutating tools
 
 - `protbind_fetch_public_data(source, identifier, project_path, approved_domain, run_propka=true,
@@ -44,6 +61,10 @@ Never guess an `ArtifactRef`, continuation token, run ID, MIME type, worker dige
 name. Obtain it from tool output or the user. Do not set `replace=true` unless the user explicitly
 intends to replace an unfrozen support input. Do not call `protbind_fetch_public_data` until the
 user has approved its exact domain.
+
+Library tools never browse arbitrary paths. If libraries are not configured, stop and ask an
+operator to run `protbind library init` and restart MCP with `--library-config`. Use
+`$protbind-library` for the full consent and import transaction.
 
 ## Failure handling
 

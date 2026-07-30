@@ -87,6 +87,51 @@ def test_mcp_cli_is_stdio_only_and_project_bounded() -> None:
     assert arguments.project_root == Path("project")
 
 
+def test_mcp_cli_accepts_private_library_config_without_arbitrary_roots() -> None:
+    arguments = _build_parser().parse_args(
+        (
+            "mcp",
+            "serve",
+            "--library-config",
+            ".protbind/library.json",
+        )
+    )
+
+    assert arguments.library_config == Path(".protbind/library.json")
+
+
+def test_library_cli_requires_explicit_data_access_confirmation() -> None:
+    parser = _build_parser()
+    with pytest.raises(SystemExit):
+        parser.parse_args(("library", "status"))
+
+    arguments = parser.parse_args(
+        ("library", "status", "--confirm-data-access")
+    )
+    assert arguments.library_command == "status"
+    assert arguments.confirm_data_access is True
+
+
+def test_p2rank_parse_requires_version_provenance() -> None:
+    arguments = _build_parser().parse_args(
+        (
+            "site",
+            "p2rank-parse",
+            "--receptor",
+            "target.cif",
+            "--predictions",
+            "target_predictions.csv",
+            "--bundle",
+            "sites.json",
+            "--p2rank-version",
+            "P2Rank 2.5",
+        )
+    )
+
+    assert arguments.site_command == "p2rank-parse"
+    assert arguments.p2rank_version == "P2Rank 2.5"
+
+
 def test_case_gate_and_advance_parse_closed_loop_arguments() -> None:
     gate = _build_parser().parse_args(("case", "gate", "run-1"))
     advance = _build_parser().parse_args(

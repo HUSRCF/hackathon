@@ -129,6 +129,20 @@ def test_mcp_public_fetch_rejects_output_before_network(tmp_path) -> None:
         )
 
 
+def test_mcp_library_reads_require_explicit_data_confirmation(tmp_path) -> None:
+    service = ProtBindMCPService(
+        workspace=tmp_path / "workspace",
+        project_root=tmp_path,
+    )
+
+    with pytest.raises(PermissionError, match="fresh explicit user confirmation"):
+        service.library_status(data_access_confirmed=False)
+
+    status = service.library_status(data_access_confirmed=True)
+    assert status["configured"] is False
+    assert status["absolute_paths_disclosed"] is False
+
+
 def test_mcp_server_exposes_only_bounded_domain_tools(tmp_path) -> None:
     pytest.importorskip("mcp")
     service = ProtBindMCPService(
@@ -151,5 +165,11 @@ def test_mcp_server_exposes_only_bounded_domain_tools(tmp_path) -> None:
         "case_pose_view",
         "artifact_metadata",
         "control_history",
+        "library_status",
+        "library_list",
+        "library_show",
+        "library_plan_import",
+        "library_apply_import",
+        "library_verify_uniprot",
     }
     assert not tool_names & {"bash", "shell", "read_file", "write_file", "fetch", "network"}

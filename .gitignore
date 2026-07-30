@@ -9,6 +9,7 @@ __pycache__/
 .venv-aiaa-esmfold-v1/
 venv/
 .env
+.protbind/
 artifacts/
 benchmark-results/
 build/

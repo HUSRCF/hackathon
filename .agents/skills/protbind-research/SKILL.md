@@ -42,3 +42,9 @@ into a scientific gate; these only help an operator decide what artifact-backed 
 Do not use shell, generic file tools, subagents, or web/network tools as a workaround. Ask the user
 to place reviewed inputs under the project root or use the identifier-only, exact-domain-approved
 public fetch tool.
+
+When the user wants reusable protein/ligand storage, batch migration, catalog inspection, or
+UniProt identity comparison, load `$protbind-library` and follow its separate per-call consent
+gate. A library entry is not automatically an accepted case input: require ACTIVE state, resolve
+any identity conflict or workflow compatibility blocker, attach the selected artifact through the
+normal case contract, and then let the case stage gate revalidate it.

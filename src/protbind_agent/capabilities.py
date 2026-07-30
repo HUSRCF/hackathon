@@ -13,6 +13,7 @@ from typing import Any
 
 from radeon_agent.hardware import probe_hardware
 
+from .external_predictors import drutai_admission_report
 from .openfold_contract import OFFICIAL_CHECKPOINT_SIZES
 from .privacy import redact_text
 
@@ -322,6 +323,11 @@ def doctor_report() -> dict[str, Any]:
             "openmm_platforms": openmm_platforms,
             "openmm_hip_available": "HIP" in openmm_platforms,
             "worker_network_isolation": network_isolation,
+            "drutai": drutai_admission_report(),
+            "p2rank_semantics": (
+                "candidate site hypotheses only; downstream receptor-frame, box, "
+                "consensus, docking, and validation gates remain required"
+            ),
         },
         "resource_policy": _openfold_resource_policy(device_count),
         "prediction_fallback_policy": _prediction_fallback_policy(),

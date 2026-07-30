@@ -25,7 +25,18 @@ from .dossier import (
     dossier_content,
     persist_run_dossier,
 )
+from .external_predictors import (
+    parse_p2rank_predictions,
+    run_p2rank,
+    write_p2rank_bundle,
+)
 from .knowledge import KnowledgeCapabilityError, SeekDBKnowledgeStore, import_document
+from .library import (
+    ImportState,
+    LibraryManager,
+    load_library_config,
+    save_library_config,
+)
 from .manifest import RunManifest, RunState
 from .models import RCSBCoordinatePolicy, ResearchMode
 from .pose_view import build_pose_scene_summary
@@ -80,6 +91,30 @@ def _workspace_argument(parser: argparse.ArgumentParser) -> None:
         type=Path,
         default=Path("artifacts/protbind"),
         help="Private content-addressed run workspace.",
+    )
+
+
+def _library_config_argument(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--config",
+        type=Path,
+        default=Path(".protbind/library.json"),
+        help=(
+            "Private library configuration containing the separately selected protein "
+            "and ligand roots."
+        ),
+    )
+
+
+def _data_access_confirmation(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--confirm-data-access",
+        action="store_true",
+        required=True,
+        help=(
+            "Confirm this invocation may inspect or mutate the selected private data. "
+            "Agent clients additionally require an interactive permission decision."
+        ),
     )
 
 
@@ -302,6 +337,147 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     _workspace_argument(data_fetch)
 
+    library = commands.add_parser(
+        "library",
+        help="Manage reusable private protein and ligand libraries with explicit consent.",
+    )
+    library_commands = library.add_subparsers(dest="library_command", required=True)
+    library_init = library_commands.add_parser(
+        "init",
+        help="Create independent content-addressed protein and ligand roots.",
+    )
+    library_init.add_argument("--protein-root", type=Path, required=True)
+    library_init.add_argument("--ligand-root", type=Path, required=True)
+    library_init.add_argument(
+        "--replace-config",
+        action="store_true",
+        help="Replace only the private config file; existing library objects are preserved.",
+    )
+    _library_config_argument(library_init)
+    _data_access_confirmation(library_init)
+
+    library_status = library_commands.add_parser(
+        "status",
+        help="Show path-redacted library counts and incoming queue status.",
+    )
+    library_status.add_argument(
+        "--show-paths",
+        action="store_true",
+        help="Explicitly disclose configured absolute roots to this CLI terminal.",
+    )
+    _library_config_argument(library_status)
+    _data_access_confirmation(library_status)
+
+    library_scan = library_commands.add_parser(
+        "scan",
+        help="Hash a local selection and freeze a non-mutating import plan.",
+    )
+    library_scan.add_argument("--kind", choices=("protein", "ligand"), required=True)
+    library_scan.add_argument("--source", type=Path, required=True)
+    library_scan.add_argument("--recursive", action="store_true")
+    library_scan.add_argument("--max-files", type=int, default=10_000)
+    library_scan.add_argument(
+        "--max-file-bytes",
+        type=int,
+        default=64 * 1024 * 1024,
+    )
+    _library_config_argument(library_scan)
+    _data_access_confirmation(library_scan)
+
+    library_import = library_commands.add_parser(
+        "import",
+        help="Apply a frozen hash-bound plan using copy (default) or confirmed move.",
+    )
+    library_import.add_argument("--kind", choices=("protein", "ligand"), required=True)
+    library_import.add_argument("--plan-id", required=True)
+    library_import.add_argument("--mode", choices=("copy", "move"), default="copy")
+    library_import.add_argument(
+        "--confirm-move",
+        help="For move mode, repeat the exact plan ID after reviewing the scan.",
+    )
+    _library_config_argument(library_import)
+    _data_access_confirmation(library_import)
+
+    library_list = library_commands.add_parser(
+        "list",
+        help="List path-redacted catalog entries.",
+    )
+    library_list.add_argument("--kind", choices=("protein", "ligand"), required=True)
+    library_list.add_argument(
+        "--state",
+        choices=tuple(state.value for state in ImportState),
+    )
+    library_list.add_argument("--limit", type=int, default=100)
+    _library_config_argument(library_list)
+    _data_access_confirmation(library_list)
+
+    library_show = library_commands.add_parser(
+        "show",
+        help="Show QC, identity state, and artifact references for one entry.",
+    )
+    library_show.add_argument("--kind", choices=("protein", "ligand"), required=True)
+    library_show.add_argument("entry_id")
+    _library_config_argument(library_show)
+    _data_access_confirmation(library_show)
+
+    library_verify = library_commands.add_parser(
+        "verify-uniprot",
+        help=(
+            "Fetch one explicitly approved accession FASTA and compare it locally; "
+            "the private sequence is never uploaded."
+        ),
+    )
+    library_verify.add_argument("entry_id")
+    library_verify.add_argument("--accession", required=True)
+    library_verify.add_argument(
+        "--approve-network",
+        action="append",
+        required=True,
+        metavar="EXACT_DOMAIN",
+        help="Must explicitly include rest.uniprot.org.",
+    )
+    _library_config_argument(library_verify)
+    _workspace_argument(library_verify)
+    _data_access_confirmation(library_verify)
+
+    site = commands.add_parser(
+        "site",
+        help="Run or parse prospective binding-site predictors without claiming truth.",
+    )
+    site_commands = site.add_subparsers(dest="site_command", required=True)
+    site_p2rank_run = site_commands.add_parser(
+        "p2rank-run",
+        help="Run local P2Rank and emit a bounded site-hypothesis bundle.",
+    )
+    site_p2rank_run.add_argument("--receptor", type=Path, required=True)
+    site_p2rank_run.add_argument("--output-dir", type=Path, required=True)
+    site_p2rank_run.add_argument("--bundle", type=Path, required=True)
+    site_p2rank_run.add_argument("--executable", default="prank")
+    site_p2rank_run.add_argument(
+        "--profile", choices=("default", "alphafold"), default="default"
+    )
+    site_p2rank_run.add_argument("--timeout", type=float, default=1800.0)
+    site_p2rank_run.add_argument("--top-k", type=int, default=3)
+    site_p2rank_run.add_argument("--replace", action="store_true")
+
+    site_p2rank_parse = site_commands.add_parser(
+        "p2rank-parse",
+        help="Parse reviewed P2Rank predictions into the same hypothesis schema.",
+    )
+    site_p2rank_parse.add_argument("--predictions", type=Path, required=True)
+    site_p2rank_parse.add_argument("--receptor", type=Path, required=True)
+    site_p2rank_parse.add_argument("--bundle", type=Path, required=True)
+    site_p2rank_parse.add_argument(
+        "--p2rank-version",
+        required=True,
+        help="Exact version string recorded with the reviewed predictions CSV.",
+    )
+    site_p2rank_parse.add_argument(
+        "--profile", choices=("default", "alphafold"), default="default"
+    )
+    site_p2rank_parse.add_argument("--top-k", type=int, default=3)
+    site_p2rank_parse.add_argument("--replace", action="store_true")
+
     case = commands.add_parser("case", help="Run, resume, or inspect research cases.")
     case_commands = case.add_subparsers(dest="case_command", required=True)
     case_run = case_commands.add_parser("run", help="Create and execute a case.")
@@ -466,6 +642,14 @@ def _build_parser() -> argparse.ArgumentParser:
         type=Path,
         default=Path("."),
         help="Root that bounds all case and support input paths.",
+    )
+    mcp_serve.add_argument(
+        "--library-config",
+        type=Path,
+        help=(
+            "Optional private library config. Agent tools remain unavailable until this "
+            "operator-selected file is supplied."
+        ),
     )
     mcp_serve.add_argument("--worker-config", type=Path)
     _workspace_argument(mcp_serve)
@@ -800,6 +984,120 @@ def _run(args: argparse.Namespace) -> int:
         print(json.dumps(materialized, ensure_ascii=False, sort_keys=True, indent=2))
         return 0
 
+    if args.command == "library":
+        if not args.confirm_data_access:
+            raise PermissionError("library commands require --confirm-data-access")
+        if args.library_command == "init":
+            config = save_library_config(
+                args.config,
+                protein_root=args.protein_root,
+                ligand_root=args.ligand_root,
+                replace=args.replace_config,
+            )
+            result = LibraryManager(config).status()
+            result["config_file"] = args.config.name
+        else:
+            config = load_library_config(args.config)
+            manager = LibraryManager(config)
+            if args.library_command == "status":
+                result = manager.status()
+                if args.show_paths:
+                    result["operator_disclosed_paths"] = {
+                        "protein": str(config.protein_root),
+                        "ligand": str(config.ligand_root),
+                    }
+            elif args.library_command == "scan":
+                plan = manager.scan(
+                    args.kind,
+                    args.source,
+                    recursive=args.recursive,
+                    max_files=args.max_files,
+                    max_file_bytes=args.max_file_bytes,
+                )
+                result = {
+                    "schema_version": plan["schema_version"],
+                    "plan_id": plan["plan_id"],
+                    "kind": plan["kind"],
+                    "library_root_id": plan["library_root_id"],
+                    "file_count": len(plan["files"]),
+                    "skipped": plan["skipped"],
+                    "semantics": plan["semantics"],
+                    "source_path_disclosed": False,
+                    "next_command": (
+                        f"protbind library import --kind {args.kind} "
+                        f"--plan-id {plan['plan_id']} --confirm-data-access"
+                    ),
+                }
+            elif args.library_command == "import":
+                result = manager.apply_saved(
+                    args.kind,
+                    args.plan_id,
+                    mode=args.mode,
+                    confirm_move=args.confirm_move,
+                )
+            elif args.library_command == "list":
+                result = manager.list_entries(
+                    args.kind,
+                    state=args.state,
+                    limit=args.limit,
+                )
+            elif args.library_command == "show":
+                result = manager.show_entry(args.kind, args.entry_id)
+            elif args.library_command == "verify-uniprot":
+                fetcher = PublicDataFetcher(args.workspace)
+                fetch = fetcher.fetch(
+                    source="uniprot-fasta",
+                    identifier=args.accession,
+                    approved_domains=tuple(dict.fromkeys(args.approve_network)),
+                    run_propka=False,
+                )
+                result = manager.verify_uniprot_bytes(
+                    args.entry_id,
+                    args.accession,
+                    fetcher.artifacts.read_bytes(fetch.artifact),
+                    source_artifact=fetch.artifact,
+                )
+                result["network_receipt"] = fetch.receipt.to_dict()
+            else:
+                raise AssertionError("unhandled library command")
+        print(json.dumps(result, ensure_ascii=False, sort_keys=True, indent=2))
+        return 0
+
+    if args.command == "site":
+        if args.site_command == "p2rank-run":
+            result = run_p2rank(
+                args.receptor,
+                args.output_dir,
+                executable=args.executable,
+                profile=args.profile,
+                timeout_seconds=args.timeout,
+                top_k=args.top_k,
+            )
+        elif args.site_command == "p2rank-parse":
+            result = parse_p2rank_predictions(
+                args.predictions,
+                receptor_sha256=sha256_file(args.receptor),
+                p2rank_version=args.p2rank_version,
+                profile=args.profile,
+                top_k=args.top_k,
+            )
+        else:
+            raise AssertionError("unhandled site command")
+        write_p2rank_bundle(args.bundle, result, replace=args.replace)
+        print(
+            json.dumps(
+                {
+                    **result,
+                    "bundle_file": args.bundle.name,
+                    "bundle_sha256": sha256_file(args.bundle),
+                },
+                ensure_ascii=False,
+                sort_keys=True,
+                indent=2,
+            )
+        )
+        return 0
+
     if args.command == "case":
         workflow = ProtBindWorkflow(
             args.workspace,
@@ -1052,6 +1350,7 @@ def _run(args: argparse.Namespace) -> int:
             workspace=args.workspace,
             project_root=args.project_root,
             config=_worker_config(args.worker_config),
+            library_config=args.library_config,
             transport=args.transport,
         )
         return 0
@@ -1271,9 +1570,11 @@ def main(argv: list[str] | None = None) -> int:
         ChemistryCapabilityError,
         FileExistsError,
         FileNotFoundError,
+        KeyError,
         KnowledgeCapabilityError,
         OSError,
         PermissionError,
+        RuntimeError,
         StructureCapabilityError,
         ValueError,
     ) as exc:
