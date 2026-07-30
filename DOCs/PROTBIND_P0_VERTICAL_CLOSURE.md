@@ -128,6 +128,15 @@ CPU 对 HIP 候选执行同一 exact ranking；同时运行不受限 CPU referen
 该 production 模式故意包含 CPU reference 作为正确性门，因此不能把全路径耗时包装成纯 kernel
 加速。100k 的 kernel/transfer 和端到端 gate 成本必须分别报告。
 
+真实 persisted-index 小型 smoke 保存在
+`experiment-results/protbind-tripharm-hip-production-smoke-gfx1100.json`，文件 SHA-256 为
+`8cce9523ac59c5ad71219eee536e9332d0bf99b5839708f1a194b33d3ab242ca`。它使用 3 个合成分子、
+9 个 candidate triangles 和 4 个 query triangles，在第二张 W7900/gfx1100 上完成 1 次预热和
+3 次测量；CPU/HIP 两个结果 ID 的完整排序哈希相同，三次均
+`committed_backend=hip`。端到端 p50/p95 为 0.1376/0.1396 s，kernel p50 为 31.04 µs。
+该夹具只证明编译产物、真实 index/query 协议和 parity gate 可执行，不是 100k 吞吐或 5×
+加速证据。
+
 ## 4. 经验记忆
 
 `memory_write` 只接受 `run_id` 和可选用户偏好。候选、evidence grade、失败码、工具版本和 artifact
