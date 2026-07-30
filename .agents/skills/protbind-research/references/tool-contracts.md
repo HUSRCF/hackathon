@@ -1,8 +1,9 @@
 # MCP tool contracts
 
 All file arguments are project-relative. The server resolves and bounds them to its configured
-project root. It runs offline over stdio and exposes no arbitrary command, raw filesystem, or
-network tool.
+project root. It runs over stdio and exposes no arbitrary command, raw filesystem, URL, or open
+network tool. Its one network-capable method is the bounded identifier-only public registry fetch
+described below.
 
 ## Read-only tools
 
@@ -22,6 +23,14 @@ network tool.
 
 ## Mutating tools
 
+- `protbind_fetch_public_data(source, identifier, project_path, approved_domain, run_propka=true,
+  replace=false)`: download exactly one whitelisted public registry record using a constructed
+  HTTPS URL and direct curl. The exact source domain must be explicitly approved. Output paths and
+  source-specific suffixes are validated before network access; redirects, ambient proxies,
+  credentials, private sequences, arbitrary URLs, and batch queries are unavailable. The tool
+  writes the fetched bytes plus a provenance sidecar, but does not attach them to a run or advance
+  a scientific stage. Gemmi/RDKit parse checks and optional PROPKA diagnostics are acquisition
+  observations, not receptor or ligand acceptance.
 - `protbind_case_create(case_path, index_path, run_id?)`: ingest an offline case plus frozen
   TriPharm index and return the initial gate. Nested `structure_file`, `pharmacophore_file`, and
   `site_derivation_source_files` must also be project-relative. Network-enabled privacy policies
@@ -33,7 +42,8 @@ network tool.
 
 Never guess an `ArtifactRef`, continuation token, run ID, MIME type, worker digest, or support
 name. Obtain it from tool output or the user. Do not set `replace=true` unless the user explicitly
-intends to replace an unfrozen support input.
+intends to replace an unfrozen support input. Do not call `protbind_fetch_public_data` until the
+user has approved its exact domain.
 
 ## Failure handling
 

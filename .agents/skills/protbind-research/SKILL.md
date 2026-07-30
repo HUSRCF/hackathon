@@ -1,6 +1,6 @@
 ---
 name: protbind-research
-description: Operate ProtBind as an interactive, local-private, stage-gated protein-ligand research workflow. Use for creating or resuming ProtBind cases, inspecting screening/docking/validation progress, attaching approved support artifacts, handling failed scientific gates, and producing evidence-bounded reports without arbitrary shell, filesystem, or network access.
+description: Operate ProtBind as an interactive, local-private, stage-gated protein-ligand research workflow. Use for creating or resuming ProtBind cases, fetching identifier-bound public candidates with exact-domain approval, inspecting screening/docking/validation progress, attaching approved support artifacts, handling failed scientific gates, and producing evidence-bounded reports without arbitrary shell, filesystem, or open network access.
 ---
 
 # ProtBind Research
@@ -24,8 +24,12 @@ source of scientific state; never invent structures, scores, validation results,
 
 Use `protbind_case_create` only for project-relative, offline case and index files. Use
 `protbind_case_attach_support` only for a named, reviewed project-local artifact and respect stage
-freeze rules. Read [tool-contracts.md](references/tool-contracts.md) when creating a case,
-attaching support, or interpreting a tool error.
+freeze rules. `protbind_fetch_public_data` is the only network-capable tool: use it only after the
+user approves the exact source domain and supplies a public registry identifier plus a
+project-relative destination. It never accepts an arbitrary URL or private sequence, and a fetched
+file remains an unaccepted candidate until the normal case gates consume it. Read
+[tool-contracts.md](references/tool-contracts.md) when fetching data, creating a case, attaching
+support, or interpreting a tool error.
 
 ## Preserve scientific boundaries
 
@@ -36,4 +40,5 @@ Never promote a screenshot, short-distance count, docking-box check, or manual v
 into a scientific gate; these only help an operator decide what artifact-backed check to inspect.
 
 Do not use shell, generic file tools, subagents, or web/network tools as a workaround. Ask the user
-to place reviewed inputs under the project root or to perform a separately authorized import.
+to place reviewed inputs under the project root or use the identifier-only, exact-domain-approved
+public fetch tool.

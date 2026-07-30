@@ -37,6 +37,13 @@ from .posebusters_holdout import (
     write_holdout_manifest,
 )
 from .privacy import require_network_approval
+from .public_data import (
+    PUBLIC_DATA_SOURCES,
+    PublicDataFetcher,
+    materialize_public_fetch,
+    required_domain,
+    validate_public_output,
+)
 from .redock_benchmark import RedockBenchmarkConfig, run_redock_benchmark
 from .redock_holdout_batch import (
     RedockHoldoutBatchConfig,
@@ -252,6 +259,48 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Use the matching reviewed 3Dmol.js LICENSE with --from-file.",
     )
     _workspace_argument(assets_3dmol)
+
+    data = commands.add_parser(
+        "data",
+        help="Acquire identifier-bound public protein or small-molecule files.",
+    )
+    data_commands = data.add_subparsers(dest="data_command", required=True)
+    data_fetch = data_commands.add_parser(
+        "fetch",
+        help="Fetch one whitelisted public record with bounded curl and parse validation.",
+    )
+    data_fetch.add_argument("--source", required=True, choices=PUBLIC_DATA_SOURCES)
+    data_fetch.add_argument("--identifier", required=True)
+    data_fetch.add_argument(
+        "--output",
+        type=Path,
+        required=True,
+        help="Project-relative output file; a provenance sidecar is written beside it.",
+    )
+    data_fetch.add_argument(
+        "--project-root",
+        type=Path,
+        default=Path("."),
+        help="Root that bounds the materialized output path.",
+    )
+    data_fetch.add_argument(
+        "--approve-network",
+        action="append",
+        required=True,
+        metavar="EXACT_DOMAIN",
+        help="Approve the exact registry domain; arbitrary URLs remain unsupported.",
+    )
+    data_fetch.add_argument(
+        "--skip-propka",
+        action="store_true",
+        help="Skip optional local PROPKA audit for downloaded protein structures.",
+    )
+    data_fetch.add_argument(
+        "--replace",
+        action="store_true",
+        help="Explicitly replace an existing materialized file with different bytes.",
+    )
+    _workspace_argument(data_fetch)
 
     case = commands.add_parser("case", help="Run, resume, or inspect research cases.")
     case_commands = case.add_subparsers(dest="case_command", required=True)
@@ -712,6 +761,43 @@ def _run(args: argparse.Namespace) -> int:
                 indent=2,
             )
         )
+        return 0
+
+    if args.command == "data":
+        if args.data_command != "fetch":
+            raise AssertionError("unhandled data command")
+        validate_public_output(args.source, args.project_root, args.output)
+        print(
+            "Public data network preflight: "
+            + json.dumps(
+                {
+                    "source": args.source,
+                    "public_identifier": args.identifier,
+                    "required_exact_domain": required_domain(args.source),
+                    "approved_exact_domains": list(args.approve_network),
+                    "private_sequence_uploaded": False,
+                    "transport": "bounded direct curl; no proxy or redirect",
+                },
+                ensure_ascii=False,
+                sort_keys=True,
+            ),
+            file=sys.stderr,
+        )
+        fetcher = PublicDataFetcher(args.workspace)
+        result = fetcher.fetch(
+            source=args.source,
+            identifier=args.identifier,
+            approved_domains=tuple(dict.fromkeys(args.approve_network)),
+            run_propka=not args.skip_propka,
+        )
+        materialized = materialize_public_fetch(
+            result,
+            fetcher.artifacts,
+            project_root=args.project_root,
+            output=args.output,
+            replace=args.replace,
+        )
+        print(json.dumps(materialized, ensure_ascii=False, sort_keys=True, indent=2))
         return 0
 
     if args.command == "case":

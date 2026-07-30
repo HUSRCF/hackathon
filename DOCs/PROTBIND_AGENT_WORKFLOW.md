@@ -69,6 +69,13 @@ LLM 不得：
 在任何联网前，先冻结并解析化合物 index、已有结构、配体化学和查询药效团。金属中心、共价配体、
 聚合物配体、错误或未指定关键手性、损坏 artifact 和 `HSA_OVERRIDE_GFX_VERSION` 直接 fail closed。
 
+创建 case 前可单独使用 identifier-only public-data 工具获取 RCSB mmCIF、AlphaFold DB mmCIF、
+UniProt FASTA、RCSB CCD ideal SDF 或 PubChem CID computed-3D SDF。该工具只构造白名单 URL，
+要求用户批准精确域名，并在联网前验证项目内输出路径和固定后缀；它不接受任意 URL、私有序列或
+批量查询，也不会把下载物自动接入 run。Gemmi/RDKit 的 parse/QC 摘要和可选 PROPKA 报告属于
+acquisition triage。尤其 PROPKA 只提供 pKa/质子化可行性及自身诊断，不能证明缺失 loop/原子已处理、
+位点正确或 receptor 已通过科学门禁。
+
 ### 3.2 阶段 2：受体解析
 
 受体优先级固定为：
@@ -347,8 +354,10 @@ continuation token 绑定 run、完整 manifest SHA-256、下一阶段和控制�
 - `UNSUPPORTED`/`FAILED`：停止，不得静默降级；
 - `COMPLETE`：全部主阶段已有 accepted record。
 
-本地 MCP 只提供 doctor、case create/status/advance/attach/report/dossier/pose-view、artifact
-metadata 和 control history；不提供 shell、任意文件内容、原始坐标或网络。`case_dossier` 区分
+本地 MCP 提供 doctor、受约束 public-data fetch、case create/status/advance/attach/report/dossier/
+pose-view、artifact metadata 和 control history；不提供 shell、任意文件内容、原始坐标或开放
+网络。public-data fetch 是唯一网络工具，只接受白名单 source、公开 identifier、精确批准域名和
+项目内目的路径，不会 attach 或推进阶段。`case_dossier` 区分
 stage record 与 postflight acceptance，`case_pose_view` 只返回无坐标的 artifact/验证/box/几何
 QA 摘要；两者都不能修改 manifest 或推进阶段。所有路径必须位于 project root，network-enabled case
 也会被 MCP create 拒绝。OpenCode 项目配置只启用本地 HipFire 与该 MCP，mutating tools 均为
@@ -393,7 +402,7 @@ ESMFold v1 的 24 aa 本机 smoke 峰值约 7.91 GiB，但这不是 700 aa 上�
 | Case/schema、隐私门、artifact/manifest、恢复审计 | 已实现并有回归测试 |
 | 用户结构/本地缓存/RCSB 拦截 | 已实现；公开 1CRN 网络与离线缓存 smoke 通过 |
 | ESMFold v1 | AIAA + 单 W7900 24 aa 离线真实推理通过；最终 receipt 为 26.112 s load、3.653 s inference、37.425 s end-to-end；须在 RECEPTOR_READY 前 attach receipt，自动调度待接 |
-| ESMFold2 / AlphaFold DB | 均为 future-only；无 ESMFold2 runnable worker、无 AlphaFold DB importer，当前授权导入仅实现 RCSB |
+| ESMFold2 / AlphaFold DB | 无 ESMFold2 runnable worker；AlphaFold DB accession-only 候选获取已实现，但尚未自动接入 receptor resolver |
 | TriPharm CPU、三模式/RRF | 已实现；三模式 protocol smoke 到 `SCREENED` |
 | persisted-index TriPharm HIP top 512 | kernel microbenchmark 已通过；完整 backend 待接 |
 | schema-2 main state / optional cofold task | 已实现；schema 1 只读，DOCKED 不再依赖 cofold |

@@ -72,6 +72,7 @@
     "protbind_case_pose_view": "allow",
     "protbind_artifact_metadata": "allow",
     "protbind_control_history": "allow",
+    "protbind_fetch_public_data": "ask",
     "protbind_case_create": "ask",
     "protbind_case_advance": "ask",
     "protbind_case_attach_support": "ask"

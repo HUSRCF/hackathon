@@ -50,7 +50,7 @@ v1 只接受 1–2 条蛋白链、总长不超过 700 aa，以及一个普通非
 | ESMFold2 | P1 future-only | 当前无可运行 worker；只有通过最终 `gfx1100` 平台的 3-complex 门禁后才可评估为共折叠替代/第二意见 |
 | ColabFold | P2 | 只保留本地 A3M/AF3 JSON `MSAProvider` 接口；公共 MSA Server 默认禁止上传序列 |
 | RCSB | P0 导入 | 已实现显式联网授权、精确链/序列门和来源 receipt |
-| AlphaFold DB | P1 future-only | 尚无 importer；未来实现也必须显式联网授权并记录 URL、版本、时间、许可证和 SHA-256 |
+| AlphaFold DB | P1 候选获取已实现 | 已有 accession-only、精确域名授权、curl + receipt 的独立候选获取；尚未自动接入 receptor resolver |
 
 依据与上游：
 

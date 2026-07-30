@@ -20,6 +20,12 @@ from .dossier import (
 )
 from .models import ArtifactRef
 from .pose_view import build_pose_scene_summary
+from .public_data import (
+    PUBLIC_DATA_SOURCES,
+    PublicDataFetcher,
+    materialize_public_fetch,
+    validate_public_output,
+)
 from .workflow import PipelineConfig, ProtBindWorkflow
 
 _REPORT_CHARACTER_LIMIT = 32_000
@@ -31,7 +37,7 @@ _PATH_FIELDS = {
 
 
 class ProtBindMCPService:
-    """Host methods with no arbitrary shell, filesystem, or network surface."""
+    """Host methods with no arbitrary shell, filesystem, URL, or open network surface."""
 
     def __init__(
         self,
@@ -91,7 +97,7 @@ class ProtBindMCPService:
 
         Both paths and every nested case ``*_file`` input must remain inside the
         configured project root. Network-enabled case policies are rejected by
-        this MCP surface; authorized imports stay a separate user-mediated flow.
+        this method; public acquisition stays a separately approved identifier-only tool.
         """
 
         case_file = self._project_file(case_path, "case_path")
@@ -105,8 +111,8 @@ class ProtBindMCPService:
         )
         if case.privacy.network_allowed or case.privacy.sequence_upload_allowed:
             raise ValueError(
-                "MCP case_create is offline-only; perform approved network resolution "
-                "outside this tool and pass content-addressed local inputs"
+                "MCP case_create is offline-only; use separately approved "
+                "fetch_public_data and then pass content-addressed local inputs"
             )
         manifest = self.workflow.create(case, index_file, run_id=run_id)
         return {
@@ -122,6 +128,37 @@ class ProtBindMCPService:
         """Re-audit a run and return the current preflight gate."""
 
         return self.controller.inspect(run_id)
+
+    def fetch_public_data(
+        self,
+        *,
+        source: str,
+        identifier: str,
+        project_path: str,
+        approved_domain: str,
+        run_propka: bool = True,
+        replace: bool = False,
+    ) -> dict[str, Any]:
+        """Fetch one registry ID into a project-relative file; arbitrary URLs are forbidden."""
+
+        if source not in PUBLIC_DATA_SOURCES:
+            raise ValueError("unsupported public data source")
+        output = Path(project_path)
+        validate_public_output(source, self.project_root, output)
+        fetcher = PublicDataFetcher(self.workspace)
+        result = fetcher.fetch(
+            source=source,
+            identifier=identifier,
+            approved_domains=(approved_domain,),
+            run_propka=run_propka,
+        )
+        return materialize_public_fetch(
+            result,
+            fetcher.artifacts,
+            project_root=self.project_root,
+            output=output,
+            replace=replace,
+        )
 
     def case_advance(
         self,
@@ -283,6 +320,9 @@ def create_mcp_server(service: ProtBindMCPService) -> Any:
     )
 
     server.tool(name="doctor", structured_output=True)(service.doctor)
+    server.tool(name="fetch_public_data", structured_output=True)(
+        service.fetch_public_data
+    )
     server.tool(name="case_create", structured_output=True)(service.case_create)
     server.tool(name="case_status", structured_output=True)(service.case_status)
     server.tool(name="case_advance", structured_output=True)(service.case_advance)

@@ -112,6 +112,23 @@ def test_mcp_service_rejects_paths_outside_project_root(tmp_path, value) -> None
         service.case_create(case_path=value, index_path="missing.sqlite")
 
 
+def test_mcp_public_fetch_rejects_output_before_network(tmp_path) -> None:
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    service = ProtBindMCPService(
+        workspace=tmp_path / "workspace",
+        project_root=project_root,
+    )
+
+    with pytest.raises(ValueError, match=r"must use the \.cif suffix"):
+        service.fetch_public_data(
+            source="rcsb-mmcif",
+            identifier="1CRN",
+            project_path="inputs/receptor.pdb",
+            approved_domain="files.rcsb.org",
+        )
+
+
 def test_mcp_server_exposes_only_bounded_domain_tools(tmp_path) -> None:
     pytest.importorskip("mcp")
     service = ProtBindMCPService(
@@ -124,6 +141,7 @@ def test_mcp_server_exposes_only_bounded_domain_tools(tmp_path) -> None:
 
     assert tool_names == {
         "doctor",
+        "fetch_public_data",
         "case_create",
         "case_status",
         "case_advance",

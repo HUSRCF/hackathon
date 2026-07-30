@@ -4,6 +4,12 @@
 
 - Prefer a user-supplied or explicitly approved RCSB structure over folding when it matches the
   target and passes coordinate/sequence quality control.
+- Treat a public-download receipt as acquisition provenance only. Gemmi missing-backbone,
+  unobserved-residue, altloc, and occupancy observations are deterministic triage, not proof that
+  the selected chains are the intended receptor or that the structure is docking-ready.
+- Treat PROPKA output as pKa/protonation feasibility plus tool diagnostics. PROPKA success does not
+  prove residue/atom completeness, repair missing loops, validate a binding site, or accept a
+  receptor; normal identity, chemistry, covalency, metal, and receptor-quality gates remain.
 - Use ESMFold v1 only to obtain a receptor structure from protein sequence. It does not perform
   protein-ligand cofolding and supplies no ligand pose.
 - Treat OpenFold3, when separately configured, as optional protein-small-molecule pose evidence.

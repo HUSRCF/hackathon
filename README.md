@@ -102,6 +102,40 @@ artifact，并共同绑定到 run manifest；HTTP transport 忽略环境代理�
 损坏的精确缓存也会 fail closed，不能因本地错误继续上传序列。歧义、错序列和金属/声明共价结构只会
 触发折叠兜底或显式失败，不会静默接纳。
 
+独立的 public-data acquisition 层可在创建 case 前按公开标识符获取候选蛋白/小分子文件。它只允许
+固定 registry 和构造出的 HTTPS URL，要求精确域名批准，并以 direct curl 禁用环境代理与重定向；
+下载物、远端元数据、校验结果和 receipt 都内容寻址。输出路径及来源规定的后缀会在联网前检查：
+
+```bash
+# 实验结构候选；默认同时运行本地 PROPKA 审计
+protbind data fetch --source rcsb-mmcif --identifier 1CRN \
+  --output inputs/rcsb-1crn.cif --project-root . \
+  --approve-network files.rcsb.org
+
+# AlphaFold DB 预测结构候选
+protbind data fetch --source alphafold-mmcif --identifier P69905 \
+  --output inputs/afdb-P69905.cif --project-root . \
+  --approve-network alphafold.ebi.ac.uk
+
+# 蛋白序列、CCD ideal coordinates、PubChem computed 3D record
+protbind data fetch --source uniprot-fasta --identifier P69905 \
+  --output inputs/uniprot-P69905.fasta --project-root . \
+  --approve-network rest.uniprot.org
+protbind data fetch --source rcsb-ccd-sdf --identifier HEM \
+  --output inputs/HEM-ideal.sdf --project-root . \
+  --approve-network files.rcsb.org
+protbind data fetch --source pubchem-cid-sdf-3d --identifier 2244 \
+  --output inputs/pubchem-2244-3d.sdf --project-root . \
+  --approve-network pubchem.ncbi.nlm.nih.gov
+```
+
+Gemmi 对 mmCIF 做确定性解析，并报告声明的未观测残基/原子、标准残基骨架/羰基缺失、altloc 和
+零占有率；RDKit 检查单分子 SDF、3D、重原子、碎片、金属和未分配手性。蛋白结构默认再通过当前
+AIAA Python 的 `python -m propka` 生成 pKa/质子化可行性及诊断 artifact；可用
+`--skip-propka` 明确跳过。PROPKA 成功不证明结构完整、位点正确或可对接，下载物也不会自动附加
+或推进 case，仍须经过正常的身份、链、金属、共价与 receptor/ligand 门禁。PubChem 汇聚记录没有
+统一许可证断言，receipt 会要求在再分发前复核 contributor provenance。
+
 当前 ESMFold v1 是外部 attested worker + receipt 导入路径，不会在 `RECEPTOR_READY` 内自动启动。
 先把无结构 case 停在 `INPUT_VALIDATED`，再于 `RECEPTOR_READY` 前附加与目标序列精确一致的 receipt；
 generic `esmfold_structure` attach 会被拒绝：
@@ -115,8 +149,8 @@ protbind case resume <run-id> --worker-config configs/protbind-workers.toml
 
 最终 24 aa 单 W7900 warm smoke receipt 记录 8,496,247,808 peak allocated bytes、26.112 s model
 load、3.653 s inference 和 37.425 s end to end；它只证明本地断网协议/环境可执行，不是 700 aa
-显存保证、结构准确率或性能 benchmark。当前授权结构 importer 只有 RCSB；AlphaFold DB 和 ESMFold2
-均为 future-only。
+显存保证、结构准确率或性能 benchmark。自动 receptor resolver 当前仍只有 RCSB；AlphaFold DB
+已经能按 accession 获取本地候选结构，但尚未自动进入 resolver，ESMFold2 仍为 future-only。
 
 schema 2 的主状态固定为：
 
@@ -156,8 +190,9 @@ MCP，默认拒绝所有工具；只读状态/报告可直接调用，创建、�
 位于 [`.agents/skills/protbind-research/SKILL.md`](.agents/skills/protbind-research/SKILL.md)，
 OpenCode 可原生发现。配置未写入不存在的 production worker digest；因此默认会诚实运行到能力门并
 停住，生产时须由操作者在 MCP command 中加入已审核的
-`--worker-config configs/protbind-workers.toml`。当前环境已完成 MCP 1.14 stdio 握手和 8 个受限
-工具枚举；新增的 `case_dossier` 与 `case_pose_view` 仍为只读、无坐标工具。本机 OpenCode 1.18.8
+`--worker-config configs/protbind-workers.toml`。当前环境已完成 MCP 1.14 stdio 握手和 11 个受限
+工具枚举；`fetch_public_data` 是唯一网络工具且始终为 `ask`，只接受白名单 source、公开 ID、
+精确域名批准和项目内输出；`case_dossier` 与 `case_pose_view` 仍为只读、无坐标工具。本机 OpenCode 1.18.8
 已完成 DeepSeek V4 Flash 的无工具云端传输冒烟测试。HipFire TUI 端到端对话仍须在本地模型服务
 启动后单独验收。
 

@@ -130,3 +130,27 @@ def test_3dmol_asset_installer_requires_explicit_source_mode() -> None:
     assert arguments.assets_command == "install-3dmol"
     assert arguments.approve_network == ["cdn.jsdelivr.net"]
     assert arguments.workspace == Path("private-workspace")
+
+
+def test_public_data_fetch_parses_identifier_only_network_contract() -> None:
+    arguments = _build_parser().parse_args(
+        (
+            "data",
+            "fetch",
+            "--source",
+            "pubchem-cid-sdf-3d",
+            "--identifier",
+            "2244",
+            "--output",
+            "inputs/aspirin.sdf",
+            "--approve-network",
+            "pubchem.ncbi.nlm.nih.gov",
+            "--skip-propka",
+        )
+    )
+
+    assert arguments.data_command == "fetch"
+    assert arguments.source == "pubchem-cid-sdf-3d"
+    assert arguments.output == Path("inputs/aspirin.sdf")
+    assert arguments.approve_network == ["pubchem.ncbi.nlm.nih.gov"]
+    assert arguments.skip_propka is True
