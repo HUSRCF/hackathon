@@ -83,6 +83,12 @@ from .redock_regression import (
     persist_redock_regression,
 )
 from .structure import StructureCapabilityError
+from .study_evidence import (
+    build_academic_evidence,
+    freeze_study_protocol,
+    persist_academic_evidence,
+    persist_frozen_study_protocol,
+)
 from .tripharm import (
     TriPharmConfig,
     build_index,
@@ -883,7 +889,11 @@ def _build_parser() -> argparse.ArgumentParser:
     _workspace_argument(mcp_serve)
 
     benchmark = commands.add_parser(
-        "benchmark", help="Benchmark TriPharm or run a scientific redocking calibration."
+        "benchmark",
+        help=(
+            "Benchmark TriPharm, run scientific redocking, or build a claim-bound "
+            "study evidence packet."
+        ),
     )
     benchmark.add_argument(
         "benchmark_command",
@@ -893,12 +903,15 @@ def _build_parser() -> argparse.ArgumentParser:
             "redock-holdout",
             "redock-holdout-run",
             "redock-regression",
+            "study-freeze",
+            "study-evidence",
         ),
         help=(
             "Use 'redock' for one sealed-reference Meeko/Vina calibration or "
             "'redock-holdout' to freeze a result-blind PoseBusters ten-case holdout or "
             "'redock-holdout-run' to execute/resume that exact holdout or "
-            "'redock-regression' to evaluate a hash-bound pilot/frozen manifest."
+            "'redock-regression' to evaluate a hash-bound pilot/frozen manifest or "
+            "'study-freeze'/'study-evidence' for a claim-bound academic evidence packet."
         ),
     )
     # These remain optional at parse time so the historical flat command and the
@@ -1067,6 +1080,29 @@ def _build_parser() -> argparse.ArgumentParser:
         "--force",
         action="store_true",
         help="Explicitly replace an existing holdout manifest output.",
+    )
+    benchmark.add_argument(
+        "--protocol",
+        type=Path,
+        help=(
+            "Study protocol draft for study-freeze or frozen, self-hashed protocol "
+            "for study-evidence."
+        ),
+    )
+    benchmark.add_argument(
+        "--candidate-results",
+        type=Path,
+        help="Hash-bound candidate redock regression JSON for study-evidence.",
+    )
+    benchmark.add_argument(
+        "--baseline-results",
+        type=Path,
+        help="Optional hash-matched baseline redock regression JSON for paired evidence.",
+    )
+    benchmark.add_argument(
+        "--markdown",
+        type=Path,
+        help="Optional reviewer-readable Markdown companion for study-evidence.",
     )
 
     return parser
@@ -1743,6 +1779,84 @@ def _run(args: argparse.Namespace) -> int:
         return 0
 
     if args.command == "benchmark":
+        if args.benchmark_command == "study-freeze":
+            if args.protocol is None:
+                raise ValueError("benchmark study-freeze requires --protocol")
+            if args.output.exists() and not args.force:
+                raise FileExistsError(
+                    "study protocol output already exists; use --force only for an "
+                    "intentional new revision and preserve the prior hash"
+                )
+            draft = json.loads(args.protocol.read_text(encoding="utf-8"))
+            frozen = freeze_study_protocol(draft)
+            persist_frozen_study_protocol(frozen, args.output)
+            print(
+                json.dumps(
+                    {
+                        "schema_version": frozen["schema_version"],
+                        "kind": frozen["kind"],
+                        "study_id": frozen["study_id"],
+                        "analysis_timing": frozen["analysis_timing"],
+                        "scope": frozen["scope"],
+                        "protocol_sha256": frozen["protocol_sha256"],
+                        "output_file_sha256": sha256_file(args.output),
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+            )
+            return 0
+        if args.benchmark_command == "study-evidence":
+            if args.protocol is None or args.candidate_results is None:
+                raise ValueError(
+                    "benchmark study-evidence requires --protocol and --candidate-results"
+                )
+            existing_outputs = [
+                path
+                for path in (args.output, args.markdown)
+                if path is not None and path.exists()
+            ]
+            if existing_outputs and not args.force:
+                raise FileExistsError(
+                    "study evidence output already exists; use --force only when "
+                    "regenerating a derived packet and retain the prior hash"
+                )
+            packet = build_academic_evidence(
+                args.protocol,
+                args.candidate_results,
+                baseline_result_path=args.baseline_results,
+            )
+            persist_academic_evidence(
+                packet,
+                args.output,
+                markdown_output=args.markdown,
+            )
+            print(
+                json.dumps(
+                    {
+                        "schema_version": packet["schema_version"],
+                        "kind": packet["kind"],
+                        "study_id": packet["study_id"],
+                        "scope": packet["scope"],
+                        "analysis_timing": packet["analysis_timing"],
+                        "primary_claim_status": packet["primary_claim_status"],
+                        "claim_statuses": {
+                            claim["claim_id"]: claim["status"]
+                            for claim in packet["claims"]
+                        },
+                        "evidence_sha256": packet["evidence_sha256"],
+                        "output_file_sha256": sha256_file(args.output),
+                        "markdown_file_sha256": (
+                            sha256_file(args.markdown)
+                            if args.markdown is not None
+                            else None
+                        ),
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+            )
+            return 0
         if args.benchmark_command == "redock-holdout":
             if args.archive is None or args.candidate_list is None:
                 raise ValueError(

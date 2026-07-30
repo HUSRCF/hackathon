@@ -495,6 +495,12 @@ failures，独立 top-1/top-5 均为 9/10，IFP Jaccard mean/median 为 0.6598/0
 `gate_complete=true`。7BTT/7YZU 分别仅移动 13/63 个新增侧链重原子，全部原始重原子最大位移为
 0 Å，手性与非键接距离门通过，并在 250 iterations 后通过真实 Meeko。它同样是已观察 holdout 上的
 受控协议修订，不能解释为新的 prospective 泛化成绩。
+现已可用 `benchmark study-freeze` 冻结 claim/endpoint/statistical plan，并用
+`benchmark study-evidence` 将 v1/v2 regression 绑定为带 Wilson interval、exact McNemar、
+负对照/消融登记和 claim matrix 的证据包。当前配对比较只有一个 v2-only success，双侧 exact
+McNemar `p=1.0`，所以“v2 统计优于 v1”明确为 `INCONCLUSIVE`，不能由 8/10 → 9/10 的点估计
+直接推出。设计、命令、文献依据与下一轮前瞻验证见
+[`DOCs/PROTBIND_ACADEMIC_EVIDENCE_LAYER.md`](DOCs/PROTBIND_ACADEMIC_EVIDENCE_LAYER.md)。
 完整哈希、逐例指标和适用边界见
 [`refine-logs/EXPERIMENT_RESULTS.md`](refine-logs/EXPERIMENT_RESULTS.md)。Vina score 只作为工具分数，
 不得解释为实验结合自由能。

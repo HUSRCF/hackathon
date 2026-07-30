@@ -1,0 +1,120 @@
+{
+  "ablations": [
+    {
+      "id": "repair-disabled",
+      "purpose": "Separate receptor-preparation coverage from docking pose ranking.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "conservative-repair-v1",
+      "purpose": "Compare conservative heavy-atom repair against the constrained new-atom geometry optimization in v2.",
+      "status": "PARTIALLY_OBSERVED_AS_BASELINE"
+    },
+    {
+      "id": "fixed-single-iteration-budget",
+      "purpose": "Test whether the adaptive 250/1000/5000 iteration ladder changes receptor-preparation success or only runtime.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "posebusters-validity-removed",
+      "purpose": "Measure how RMSD-only reporting would inflate apparent success; this ablation may not replace the primary endpoint.",
+      "status": "NOT_RUN_DIAGNOSTIC_ONLY"
+    }
+  ],
+  "analysis_timing": "RETROSPECTIVE_AFTER_OUTCOME",
+  "arm_bindings": {
+    "baseline": {
+      "label": "repair-protocol-v1",
+      "regression_manifest_sha256": "f289a0b35c0184363af16cbd5bcfd69dc0e5b93209f38659d9dd17aee5ade91f"
+    },
+    "candidate": {
+      "label": "repair-protocol-v2-restrained-sidechain",
+      "regression_manifest_sha256": "45a08672014af2f359bbd1c3484d234ed9bc931779351f087f9127c039b930f3"
+    }
+  },
+  "claim_rules": [
+    {
+      "claim": "Repair protocol v2 reaches at least 80% top-1 PB-valid pose recovery on the fixed ten-case pilot.",
+      "claim_id": "C1_PILOT_TOP1_THRESHOLD",
+      "endpoint": "candidate_top1_pose_recovery_rate",
+      "operator": "gte",
+      "primary": true,
+      "threshold": 0.8
+    },
+    {
+      "claim": "Repair protocol v2 completes all ten frozen cases without removing failures from the denominator.",
+      "claim_id": "C2_WORKFLOW_COMPLETION",
+      "endpoint": "candidate_workflow_completion_rate",
+      "operator": "eq",
+      "primary": false,
+      "threshold": 1.0
+    },
+    {
+      "claim": "Repair protocol v2 is superior to repair protocol v1 for paired top-1 pose recovery.",
+      "claim_id": "C3_PAIRED_SUPERIORITY",
+      "endpoint": "paired_top1_superiority",
+      "operator": "paired_exact_superiority",
+      "primary": false
+    },
+    {
+      "claim": "Repair protocol v2 reaches at least 80% top-5 oracle pose recovery on the fixed ten-case pilot.",
+      "claim_id": "C4_TOP5_ORACLE_THRESHOLD",
+      "endpoint": "candidate_top5_oracle_pose_recovery_rate",
+      "operator": "gte",
+      "primary": false,
+      "threshold": 0.8
+    }
+  ],
+  "dataset_binding": {
+    "frozen_case_count": 10,
+    "holdout_selection_hash": "242f43398baa76fee2b6b7ab0e53546cd066597cb3f638f81be4378dc8146a89",
+    "holdout_sha256": "01d9fd57f31ef006601b6a1e982d2cf020d50761bc9c8f5bfe61497ccc064ca3",
+    "name": "PoseBusters fixed-ten holdout selected 2026-07-25"
+  },
+  "design": "PAIRED_FROZEN_HOLDOUT",
+  "kind": "PROTBIND_STUDY_PROTOCOL",
+  "negative_controls": [
+    {
+      "id": "perturbed-pocket-box",
+      "purpose": "Translate the known-site docking box away from the crystallographic site to test whether recovery depends on correct pocket localization.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "shuffled-vina-ranking",
+      "purpose": "Randomize pose order with a frozen seed to quantify how much top-1 recovery depends on ranking rather than top-5 sampling.",
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "identity-and-stereochemistry-tamper",
+      "purpose": "Verify that atom-identity, bond-order, and stereochemistry changes fail closed before being counted as valid recovery.",
+      "status": "NOT_RUN"
+    }
+  ],
+  "primary_endpoint": {
+    "denominator": "all_frozen_cases",
+    "id": "candidate_top1_pose_recovery_rate",
+    "success_definition": "PoseBusters-valid AND symmetry-aware heavy-atom RMSD <= 2.0 angstrom"
+  },
+  "protocol_sha256": "0e478850d0be7dfa0eaced3a0c448bdae7dcb456ae4d3d095522c5b49218395d",
+  "schema_version": "1.0",
+  "scientific_boundaries": [
+    "The ten cases are a pilot method-verification set and cannot establish broad target, chemotype, or apo-to-holo generalisation.",
+    "Known-site redocking measures pose reproduction when the crystallographic pocket is supplied; it does not measure blind pocket finding.",
+    "The reference pose is validation-only and must remain unavailable to docking and ranking.",
+    "Top-5 is an oracle diagnostic and must not be described as prospective top-1 selection accuracy.",
+    "Vina scores are ranking diagnostics, not experimental binding free energies.",
+    "PoseBusters validity, symmetry-aware RMSD, and interaction fingerprints are structural evidence, not proof of biological binding.",
+    "A retrospective protocol can make its analysis reproducible but cannot retroactively become a prospective preregistration.",
+    "All frozen cases remain in the denominator; preparation or metric failures count as failures rather than exclusions."
+  ],
+  "scope": "PILOT_METHOD_VERIFICATION",
+  "statistical_plan": {
+    "alpha": 0.05,
+    "confidence_level": 0.95,
+    "missing_case_policy": "COUNT_AS_FAILURE",
+    "multiplicity": "ONE_PRIMARY_OTHERS_DESCRIPTIVE",
+    "paired_test": "EXACT_MCNEMAR_TWO_SIDED"
+  },
+  "study_id": "posebusters-fixed10-repair-v2-pilot",
+  "title": "Constrained receptor-repair protocol v2: frozen ten-case pose-recovery pilot"
+}
