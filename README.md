@@ -221,7 +221,8 @@ bootstrap，不能进入 Radeon 性能证据。
 `memory_write` 不接受模型提供候选、分数或结论。它只从深审计通过的 `REPORTED` manifest
 确定性派生 experience artifact；检索投影只能作为历史提示，不会自动改变 box、seed、筛选阈值或
 证据等级。完整的 Agent、HIP screening 和 benchmark 操作见
-[P0 垂直闭环说明](DOCs/PROTBIND_P0_VERTICAL_CLOSURE.md)。
+[P0 垂直闭环说明](DOCs/PROTBIND_P0_VERTICAL_CLOSURE.md)。正式 W7900 Agent receipt 已保存为
+[`experiment-results/protbind-agent-w7900-c58ca3c.json`](experiment-results/protbind-agent-w7900-c58ca3c.json)。
 
 OpenCode 1.18.8 本身没有列出 PDF 文字提取或 OCR 内建工具；ProtBind 因而没有开放通用 bash，
 而是提供受限的 `knowledge_document_inspect/import/search`。PDF 逐页先比较 PyMuPDF 与本机

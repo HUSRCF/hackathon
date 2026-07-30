@@ -92,6 +92,21 @@ gfx1100、HSA override、prompt suite、TTFT、吞吐、总时延、系统 Radeo
 进程/daemon/runtime 绑定可验证且有显存样本时，`evidence_eligible=true`。DeepSeek 不接受为该
 benchmark backend。
 
+2026-07-30 的正式 W7900/gfx1100 receipt 为
+`experiment-results/protbind-agent-w7900-c58ca3c.json`，文件 SHA-256 为
+`8b3f16fd63e54ac4d158d8945095ee9a2181a0e0ce43195f470e828a0ddd9ab6`。它绑定 ProtBind
+`c58ca3cc224ad2ca0979ef148d2119e595da319f`、HipFire
+`92419d74e527caf1a283852ad5b059f70c0208f2`、Qwen MQ4 权重
+`ba83acf5bfd5d4e334b0afc26d779734e31623bb7f74e807c3581dfecb3128ad` 和实际加载的
+HIP 7.14 runtime library。三次 measured run 的工具序列、工具成功和 artifact 引用通过率均为
+1.0；总时延 p50/p95 为 16.552/16.692 s，首模型 TTFT 为 9.605/9.707 s，端到端模型吞吐为
+33.139/37.138 tokens/s，所选 GPU 的峰值已用显存为 7,271,006,208 bytes。
+
+HipFire 当前把每次响应近似作为单个流 span 交付，所以 receipt 将 post-first throughput 标为
+不可测，而不是用接近零的 `total−TTFT` 生成虚高数字。该次正式运行关闭 speculation；此前 DFlash
+开发烟测未能可靠完成结构化工具语法，不能混入正式结果。模型上游转换 revision 未随 MQ4 文件提供，
+因此以完整文件 SHA-256 作为本地内容 revision；这足以复现本地字节，但不补写未知的上游 commit。
+
 ## 3. TriPharm HIP 生产接入
 
 worker 配置：
@@ -126,7 +141,6 @@ SQLite 检索投影。seekdb 仍是文献和科学状态源；经验投影不能
 ## 5. 尚未由 P0 声称完成
 
 - 100k 固定化学库上的正式 TriPharm 5× 性能门；
-- 干净 revision 上三次重复的最终 Radeon Agent 提交 receipt；
 - Web 写操作面板、top-5 pose 比较和 fpocket/P2Rank 自动共识；
 - OpenFold3 checkpoint、OpenMM HIP、ESMFold2 和多 GPU 调度。
 

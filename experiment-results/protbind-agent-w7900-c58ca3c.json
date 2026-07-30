@@ -1,0 +1,455 @@
+{
+  "backend": "hipfire",
+  "cloud_result": false,
+  "config": {
+    "code_revision": "c58ca3cc224ad2ca0979ef148d2119e595da319f",
+    "hipfire_jinja_mode": "default-on",
+    "hipfire_revision": "92419d74e527caf1a283852ad5b059f70c0208f2",
+    "hipfire_speculation": "off",
+    "hipfire_visible_device": 1,
+    "label": "w7900-gfx1100-formal",
+    "model": "qwen3.5:9b",
+    "model_revision": "local-mq4-ba83acf5bfd5",
+    "model_sha256": "ba83acf5bfd5d4e334b0afc26d779734e31623bb7f74e807c3581dfecb3128ad",
+    "quantization": "mq4",
+    "repetitions": 3,
+    "warmup_runs": 1
+  },
+  "evidence_eligible": true,
+  "hardware_receipt": {
+    "architectures": [
+      "gfx1100",
+      "gfx11"
+    ],
+    "captured_at": "2026-07-30T14:28:36.940544+00:00",
+    "competition_roles": [
+      "primary-radeon-rdna3",
+      "unclassified"
+    ],
+    "device_architectures": [
+      "gfx1100",
+      "gfx1100"
+    ],
+    "evidence": [
+      {
+        "available": true,
+        "command": [
+          "rocminfo"
+        ],
+        "error": null,
+        "output_sha256": "10673cef66fad474c7b1a36a4fc4d33b0d8799df5bcc077ab17de4f3839e97ce",
+        "relevant_output": [
+          "Compute Unit:            128",
+          "Name:                    gfx1100",
+          "Compute Unit:            96",
+          "Name:                    amdgcn-amd-amdhsa--gfx1100",
+          "Name:                    amdgcn-amd-amdhsa--gfx11-generic",
+          "Name:                    gfx1100",
+          "Compute Unit:            96",
+          "Name:                    amdgcn-amd-amdhsa--gfx1100",
+          "Name:                    amdgcn-amd-amdhsa--gfx11-generic"
+        ],
+        "return_code": 0
+      },
+      {
+        "available": true,
+        "command": [
+          "amd-smi",
+          "static",
+          "--json"
+        ],
+        "error": null,
+        "output_sha256": "327d38b86d7b27a872a5062e60f9e9139488631b9e6559561d7515c9e731c48f",
+        "relevant_output": [
+          "\"target_graphics_version\": \"gfx1100\",",
+          "\"slowdown_vram_temperature\": {",
+          "\"shutdown_vram_temperature\": {",
+          "\"GFX\": \"DISABLED\",",
+          "\"vram\": {",
+          "\"target_graphics_version\": \"gfx1100\",",
+          "\"slowdown_vram_temperature\": {",
+          "\"shutdown_vram_temperature\": {",
+          "\"GFX\": \"DISABLED\",",
+          "\"vram\": {"
+        ],
+        "return_code": 0
+      },
+      {
+        "available": true,
+        "command": [
+          "rocm-smi",
+          "--showproductname",
+          "--showmeminfo",
+          "vram",
+          "--showdriverversion"
+        ],
+        "error": null,
+        "output_sha256": "dfc722cfa7886e043bf480839530e482195cd0063b8771bca459b2d533269004",
+        "relevant_output": [
+          "Driver version: 6.19.14.31400000",
+          "GPU[0]\t\t: VRAM Total Memory (B): 48301604864",
+          "GPU[0]\t\t: VRAM Total Used Memory (B): 118636544",
+          "GPU[1]\t\t: VRAM Total Memory (B): 48301604864",
+          "GPU[1]\t\t: VRAM Total Used Memory (B): 7270928384",
+          "GPU[0]\t\t: Card Series: \t\tAMD Radeon Pro W7900",
+          "GPU[0]\t\t: Card Model: \t\t0x7448",
+          "GPU[0]\t\t: GFX Version: \t\tgfx1100",
+          "GPU[1]\t\t: Card Series: \t\tAMD Radeon Pro W7900 Dual Slot",
+          "GPU[1]\t\t: Card Model: \t\t0x744a",
+          "GPU[1]\t\t: GFX Version: \t\tgfx1100"
+        ],
+        "return_code": 0
+      }
+    ],
+    "host_fingerprint": "b5d65f0ae389b602",
+    "hsa_override_active": false,
+    "platform": "Linux-7.0.0-28-generic-x86_64-with-glibc2.39",
+    "python_version": "3.12.7",
+    "rocm_version": null
+  },
+  "hipfire_health": {
+    "idle_timeout_sec": 0,
+    "model": "qwen3.5-9b.mq4",
+    "pid": 827044,
+    "status": "ok",
+    "token": "<redacted>"
+  },
+  "kind": "protbind.radeon-agent-tool-benchmark",
+  "prompt_request_sha256": "fadb6ab5f129e2d2d4c3159fb1d31753748a346816321bf5a970345a554a2c66",
+  "provenance": {
+    "code_receipt": {
+      "clean": true,
+      "dirty_entry_count": 0,
+      "path_disclosed": false,
+      "porcelain_status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "revision": "c58ca3cc224ad2ca0979ef148d2119e595da319f"
+    },
+    "code_revision": "c58ca3cc224ad2ca0979ef148d2119e595da319f",
+    "hipfire_process_receipt": {
+      "daemon_executable": {
+        "path_disclosed": false,
+        "sha256": "8295ad475cc0cfe8f9e36bf58e9c073999248a6148bdd16c99dd67a017f99238",
+        "total_bytes": 17853920
+      },
+      "daemon_pid": 827063,
+      "loaded_hip_runtime": {
+        "libraries": [
+          {
+            "library_name": "libamdhip64.so.7.14.60850-0000000",
+            "sha256": "69e34bce2d4053a5be81c055135a45398a5ca2dcfc0cfec82a5e6901a8f7fb15",
+            "total_bytes": 28851360
+          }
+        ],
+        "path_disclosed": false,
+        "version_hints": [
+          "7.14"
+        ]
+      },
+      "process_paths_disclosed": false,
+      "runtime_settings": {
+        "jinja_mode": "default-on",
+        "model": "qwen3.5:9b",
+        "speculation": "off",
+        "thinking": "disabled-per-request",
+        "visible_device": 1
+      },
+      "server_executable": {
+        "path_disclosed": false,
+        "sha256": "b29d78892abd5a9398e0700f0cb602f725089602ed1a5082d681c7257b2bf4d0",
+        "total_bytes": 101814712
+      },
+      "server_pid": 827044,
+      "verified": true
+    },
+    "hipfire_revision": "92419d74e527caf1a283852ad5b059f70c0208f2",
+    "hipfire_source_receipt": {
+      "clean": true,
+      "dirty_entry_count": 0,
+      "path_disclosed": false,
+      "porcelain_status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "revision": "92419d74e527caf1a283852ad5b059f70c0208f2"
+    },
+    "model_name": "qwen3.5:9b",
+    "model_revision": "local-mq4-ba83acf5bfd5",
+    "model_weights_receipt": {
+      "digest_semantics": "SHA-256 of the exact model file bytes",
+      "file_count": 1,
+      "path_disclosed": false,
+      "sha256": "ba83acf5bfd5d4e334b0afc26d779734e31623bb7f74e807c3581dfecb3128ad",
+      "total_bytes": 5313750016
+    },
+    "model_weights_sha256": "ba83acf5bfd5d4e334b0afc26d779734e31623bb7f74e807c3581dfecb3128ad",
+    "prompt_suite_sha256": "b7fbf179a2f0212b94d58d0ff7857559d9d50aa9cb925db946bcd8e181156199",
+    "protbind_python_torch_hip_version": "7.2.53211",
+    "protbind_python_torch_version": "2.12.1+rocm7.2",
+    "rocm_version": null,
+    "workload_path_name": "protbind_agent_toolcall.json"
+  },
+  "required_tools": [
+    "case_status",
+    "knowledge_search",
+    "memory_write"
+  ],
+  "samples": [
+    {
+      "answer_chars": 635,
+      "answer_sha256": "8d0f429acb3722bea3ac8990aa7d5c69978c8d050003a82d727d9a3d766e3bfc",
+      "artifact_citation_present": true,
+      "citation_warnings": [],
+      "completion_tokens": 535,
+      "end_to_end_model_tokens_per_second": 37.13829571483466,
+      "final_model_ttft_seconds": 5.057987754000351,
+      "first_model_ttft_seconds": 9.347403888998087,
+      "model_calls": 2,
+      "model_timings": [
+        {
+          "time_to_first_token_seconds": 9.347403888998087,
+          "total_seconds": 9.347542645999056
+        },
+        {
+          "time_to_first_token_seconds": 5.057987754000351,
+          "total_seconds": 5.0580726280022645
+        }
+      ],
+      "model_usages": [
+        {
+          "completion_tokens": 94,
+          "prompt_tokens": 2850,
+          "total_tokens": 2944
+        },
+        {
+          "completion_tokens": 441,
+          "prompt_tokens": 3886,
+          "total_tokens": 4327
+        }
+      ],
+      "post_first_model_tokens_per_second": null,
+      "repetition": 0,
+      "required_tool_sequence_passed": true,
+      "status": "COMPLETED",
+      "tool_calls": [
+        "case_status",
+        "knowledge_search",
+        "memory_write"
+      ],
+      "tool_success_rate": 1.0,
+      "tool_timeline": [
+        {
+          "confirmed": true,
+          "duration_seconds": 0.4772921999974642,
+          "error_type": null,
+          "ok": true,
+          "started_at_monotonic": 38521.801586713,
+          "tool": "case_status"
+        },
+        {
+          "confirmed": true,
+          "duration_seconds": 1.7912216420008917,
+          "error_type": null,
+          "ok": true,
+          "started_at_monotonic": 38522.27893937,
+          "tool": "knowledge_search"
+        },
+        {
+          "confirmed": true,
+          "duration_seconds": 0.016011942003387958,
+          "error_type": null,
+          "ok": true,
+          "started_at_monotonic": 38524.070229264,
+          "tool": "memory_write"
+        }
+      ],
+      "validated_artifact_citations": [
+        "sha256:ebe9c36e8eebd3f60a45e1a1f3f2962d7fde9c317483f1b59d8144032b5b1b7d"
+      ],
+      "wall_seconds": 16.691974784000195
+    },
+    {
+      "answer_chars": 532,
+      "answer_sha256": "012474bb324598c5341222ea370ee30a40fe3eccfd9f3167ac2e75398c7a63f6",
+      "artifact_citation_present": true,
+      "citation_warnings": [
+        "model emitted artifact IDs absent from tool results"
+      ],
+      "completion_tokens": 461,
+      "end_to_end_model_tokens_per_second": 33.138599800425126,
+      "final_model_ttft_seconds": 4.305545808994793,
+      "first_model_ttft_seconds": 9.605422110005748,
+      "model_calls": 2,
+      "model_timings": [
+        {
+          "time_to_first_token_seconds": 9.605422110005748,
+          "total_seconds": 9.605637906002812
+        },
+        {
+          "time_to_first_token_seconds": 4.305545808994793,
+          "total_seconds": 4.305631814997469
+        }
+      ],
+      "model_usages": [
+        {
+          "completion_tokens": 94,
+          "prompt_tokens": 2850,
+          "total_tokens": 2944
+        },
+        {
+          "completion_tokens": 367,
+          "prompt_tokens": 3886,
+          "total_tokens": 4253
+        }
+      ],
+      "post_first_model_tokens_per_second": null,
+      "repetition": 1,
+      "required_tool_sequence_passed": true,
+      "status": "COMPLETED",
+      "tool_calls": [
+        "case_status",
+        "knowledge_search",
+        "memory_write"
+      ],
+      "tool_success_rate": 1.0,
+      "tool_timeline": [
+        {
+          "confirmed": true,
+          "duration_seconds": 0.48244442400027765,
+          "error_type": null,
+          "ok": true,
+          "started_at_monotonic": 38538.751091578,
+          "tool": "case_status"
+        },
+        {
+          "confirmed": true,
+          "duration_seconds": 2.130905800993787,
+          "error_type": null,
+          "ok": true,
+          "started_at_monotonic": 38539.233624824,
+          "tool": "knowledge_search"
+        },
+        {
+          "confirmed": true,
+          "duration_seconds": 0.026562192993878853,
+          "error_type": null,
+          "ok": true,
+          "started_at_monotonic": 38541.364584959,
+          "tool": "memory_write"
+        }
+      ],
+      "validated_artifact_citations": [
+        "sha256:ebe9c36e8eebd3f60a45e1a1f3f2962d7fde9c317483f1b59d8144032b5b1b7d"
+      ],
+      "wall_seconds": 16.552444243003265
+    },
+    {
+      "answer_chars": 501,
+      "answer_sha256": "43052aa9bcb585408bc8dad722b71d8fed7d635e748c4d5aef6bbbcaa058b2a4",
+      "artifact_citation_present": true,
+      "citation_warnings": [
+        "model emitted artifact IDs absent from tool results"
+      ],
+      "completion_tokens": 453,
+      "end_to_end_model_tokens_per_second": 32.48115627605949,
+      "final_model_ttft_seconds": 4.239452955996967,
+      "first_model_ttft_seconds": 9.706838842997968,
+      "model_calls": 2,
+      "model_timings": [
+        {
+          "time_to_first_token_seconds": 9.706838842997968,
+          "total_seconds": 9.707009511999786
+        },
+        {
+          "time_to_first_token_seconds": 4.239452955996967,
+          "total_seconds": 4.239538330999494
+        }
+      ],
+      "model_usages": [
+        {
+          "completion_tokens": 94,
+          "prompt_tokens": 2850,
+          "total_tokens": 2944
+        },
+        {
+          "completion_tokens": 359,
+          "prompt_tokens": 3886,
+          "total_tokens": 4245
+        }
+      ],
+      "post_first_model_tokens_per_second": null,
+      "repetition": 2,
+      "required_tool_sequence_passed": true,
+      "status": "COMPLETED",
+      "tool_calls": [
+        "case_status",
+        "knowledge_search",
+        "memory_write"
+      ],
+      "tool_success_rate": 1.0,
+      "tool_timeline": [
+        {
+          "confirmed": true,
+          "duration_seconds": 0.49591917599900626,
+          "error_type": null,
+          "ok": true,
+          "started_at_monotonic": 38555.404932094,
+          "tool": "case_status"
+        },
+        {
+          "confirmed": true,
+          "duration_seconds": 1.8559009960008552,
+          "error_type": null,
+          "ok": true,
+          "started_at_monotonic": 38555.900928409,
+          "tool": "knowledge_search"
+        },
+        {
+          "confirmed": true,
+          "duration_seconds": 0.01601149899943266,
+          "error_type": null,
+          "ok": true,
+          "started_at_monotonic": 38557.756894901,
+          "tool": "memory_write"
+        }
+      ],
+      "validated_artifact_citations": [
+        "sha256:ebe9c36e8eebd3f60a45e1a1f3f2962d7fde9c317483f1b59d8144032b5b1b7d"
+      ],
+      "wall_seconds": 16.31563816099515
+    }
+  ],
+  "schema_version": "1.0",
+  "scientific_semantics": "Measures local Agent inference/tool orchestration only. It is not docking accuracy, affinity, pose validity, or scientific-kernel performance.",
+  "summary": {
+    "artifact_citation_pass_rate": 1.0,
+    "end_to_end_model_tokens_per_second": {
+      "count": 3,
+      "p50": 33.138599800425126,
+      "p95": 37.13829571483466
+    },
+    "first_model_ttft_seconds": {
+      "count": 3,
+      "p50": 9.605422110005748,
+      "p95": 9.706838842997968
+    },
+    "post_first_model_tokens_per_second": {
+      "count": 0,
+      "p50": null,
+      "p95": null
+    },
+    "required_tool_sequence_pass_rate": 1.0,
+    "tool_success_rate": 1.0,
+    "wall_seconds": {
+      "count": 3,
+      "p50": 16.552444243003265,
+      "p95": 16.691974784000195
+    }
+  },
+  "throughput_semantics": "End-to-end model tokens/s divides reported completion tokens by complete model-call time. Post-first tokens/s is omitted when HipFire emits a response in one effectively atomic stream span (<0.01 s after TTFT).",
+  "vram": {
+    "peak_used_bytes_by_device": {
+      "0": 118714368,
+      "1": 7271006208
+    },
+    "sample_count": 162,
+    "sampling_scope": "system-wide Radeon used VRAM during measured Agent runs",
+    "selected_device_peak_used_bytes": 7271006208
+  }
+}
