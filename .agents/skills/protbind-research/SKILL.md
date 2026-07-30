@@ -5,8 +5,9 @@ description: Operate ProtBind as an interactive, local-private, stage-gated prot
 
 # ProtBind Research
 
-Control ProtBind through its typed MCP tools. Treat tool artifacts and gate receipts as the only
-source of scientific state; never invent structures, scores, validation results, or completion.
+Control ProtBind through either the built-in fixed ToolSpec runtime or its typed MCP tools. Both
+must call the same bounded service. Treat tool artifacts and gate receipts as the only source of
+scientific state; never invent structures, scores, validation results, or completion.
 
 ## Run the closed loop
 
@@ -21,6 +22,12 @@ source of scientific state; never invent structures, scores, validation results,
    a fresh status. After `DOCKED`, use `protbind_case_pose_view` only for coordinate-free visual-QA
    metadata. At any checkpoint use `protbind_case_dossier` to distinguish computed stages from
    accepted stages. On `COMPLETE`, retrieve both the deterministic report and dossier.
+
+For a local interactive session, prefer `protbind agent --backend hipfire` when OpenCode is not
+needed. Do not add generic MCP discovery to the built-in Agent. Read-only calls may execute
+directly; public fetch, case mutation, library/knowledge access, RAG synchronization, and memory
+write require a fresh host confirmation showing reads, writes, network, scientific-state impact,
+next state, and recovery.
 
 Use `protbind_case_create` only for project-relative, offline case and index files. Use
 `protbind_case_attach_support` only for a named, reviewed project-local artifact and respect stage
@@ -49,6 +56,11 @@ only after a separate confirmation with `protbind_knowledge_import`; use
 `protbind_knowledge_search` for retrieval. Cite the returned artifact ID and one-based PDF page (or
 Markdown section). Retrieval is not scientific validation, and a missing hit is not evidence of
 absence. Never open generic shell/PDF/network tools through the Agent as a substitute.
+
+Write an experience memory only with explicit confirmation and only from a deep-audited
+`REPORTED` run. Candidate identity, failures, toolchain, evidence grade, and artifact references
+must be derived from that run rather than supplied by the model. Retrieved experience is a hint;
+never copy its box, seed, thresholds, or scientific conclusion into a new protocol.
 
 When the user wants reusable protein/ligand storage, batch migration, catalog inspection, or
 UniProt identity comparison, load `$protbind-library` and follow its separate per-call consent

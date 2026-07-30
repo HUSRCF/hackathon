@@ -2,6 +2,7 @@
 # This intentionally excludes packages inherited from AIAA and the editable local project.
 FlagEmbedding==1.4.0
 GridDataFormats==1.2.0
+huggingface-hub==1.12.0
 ir_datasets==0.6.3
 mda-xdrlib==0.2.0
 MDAnalysis==2.10.0
@@ -20,4 +21,6 @@ rustworkx==0.18.0
 sentence-transformers==5.6.0
 sentencepiece==0.2.2
 spyrmsd==0.9.0
+tokenizers==0.22.2
+transformers==5.6.2
 vina==1.2.7

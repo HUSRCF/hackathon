@@ -15,7 +15,8 @@ from protbind_agent.models import (
     ResearchMode,
     TargetSpec,
 )
-from protbind_agent.tripharm import build_jsonl_index
+from protbind_agent.tripharm import build_jsonl_index, query_index
+from protbind_agent.tripharm_hip import HIPQueryResult
 from protbind_agent.worker_protocol import WorkerProvenance
 from protbind_agent.workflow import (
     PipelineConfig,
@@ -82,6 +83,12 @@ def test_screening_run_resumes_without_recomputing_and_degrades_explicitly(tmp_p
 
     assert manifest.state is RunState.SCREENED
     assert [hit["molecule_id"] for hit in screen["hits"]] == ["mol-a", "mol-b"]
+    assert screen["screening_backends"] == {"ligand": "cpu-reference"}
+    backend_receipt = artifacts.read_json(
+        type(screen_ref).from_dict(screen["backend_receipts"]["ligand"])
+    )
+    assert backend_receipt["fallback"] is True
+    assert backend_receipt["fallback_reason"] == "HIP_EXECUTABLE_UNAVAILABLE"
     resumed = workflow.run(workflow.manifests.load("screen-run"), stop_after=RunState.SCREENED)
     assert resumed.stage_records[RunState.SCREENED.value].outputs[0] == screen_ref
     with pytest.raises(ValueError, match="does not match current input/config"):
@@ -96,6 +103,77 @@ def test_screening_run_resumes_without_recomputing_and_degrades_explicitly(tmp_p
     report = artifacts.read_bytes(degraded.artifacts["degraded_report"]).decode()
     assert "No missing scientific result was imputed" in report
     assert str(tmp_path) not in report
+
+
+def test_screening_commits_hip_only_after_adapter_parity(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    workspace = tmp_path / "workspace"
+    feature_file = tmp_path / "features.jsonl"
+    feature_file.write_text(
+        json.dumps(
+            {
+                "molecule_id": "mol-a",
+                "smiles": "CCO",
+                "conformers": [{"id": 0, "features": _feature_payload()}],
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    index = tmp_path / "library.sqlite"
+    build_jsonl_index(feature_file, index)
+    artifacts = ArtifactStore(workspace)
+    query = artifacts.put_json({"features": _feature_payload()}, producer="test-query")
+    case = ResearchCase(
+        case_id="hip-screen-case",
+        target=TargetSpec(name="target", sequences=("ACDEFG",)),
+        mode=ResearchMode.LIGAND_ONLY,
+        ligand=LigandHypothesis(pharmacophore=query),
+    )
+    executable = tmp_path / "tripharm_hip_query"
+    executable.write_bytes(b"fixture executable identity")
+
+    def fake_hip(index_path, features, **_kwargs):  # noqa: ANN001, ANN202
+        hits = query_index(index_path, features, top_k=512)
+        return HIPQueryResult(
+            hits=tuple(hits),
+            receipt={
+                "schema_version": "1.0",
+                "kind": "protbind.tripharm-hip-query-receipt",
+                "backend": "hip-prefilter+cpu-exact-ranking",
+                "ranked_molecule_ids_exact": True,
+                "committed_backend": "hip",
+            },
+        )
+
+    monkeypatch.setattr("protbind_agent.workflow.query_index_hip", fake_hip)
+    workflow = ProtBindWorkflow(
+        workspace,
+        config=PipelineConfig(
+            screen_backend="hip",
+            hip_executable=executable,
+        ),
+    )
+    manifest = workflow.create(case, index, run_id="hip-screen-run")
+    receptor_path = tmp_path / "receptor.pdb"
+    receptor_path.write_text("fixture receptor\n", encoding="utf-8")
+    workflow.attach_support(
+        manifest,
+        "receptor_structure",
+        receptor_path,
+        media_type="chemical/x-pdb",
+    )
+
+    screened = workflow.run(manifest, stop_after=RunState.SCREENED)
+    screen_ref = screened.stage_records[RunState.SCREENED.value].outputs[0]
+    payload = artifacts.read_json(screen_ref)
+    receipt = artifacts.read_json(screened.artifacts["screen_backend_ligand"])
+
+    assert screen_ref.producer == "protbind.tripharm.hip-assisted"
+    assert payload["screening_backends"] == {"ligand": "hip"}
+    assert receipt["ranked_molecule_ids_exact"] is True
+    assert receipt["fallback"] is False
 
 
 def test_explicit_fixture_workers_can_complete_state_machine(tmp_path) -> None:

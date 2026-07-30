@@ -180,6 +180,13 @@ scripts/aiaa-protbind.sh -m protbind_agent mcp serve \
   --workspace artifacts/protbind --project-root . \
   --library-config .protbind/library.json \
   --knowledge-model .protbind/models/bge-m3
+
+# 不依赖 OpenCode 的内置 Agent；每个写操作仍逐次显示并要求确认
+scripts/aiaa-protbind.sh -m protbind_agent agent \
+  --backend hipfire --model qwen3.5:9b \
+  --workspace artifacts/protbind \
+  --knowledge-model .protbind/models/qwen3-embedding-0.6b \
+  "保留隐私，检查案例状态并只推进一个通过门禁的阶段"
 ```
 
 门禁决策为 `READY | NEEDS_ACTION | RETRYABLE | UNSUPPORTED | FAILED | COMPLETE`；postflight 另有
@@ -201,9 +208,20 @@ PDF/OCR 门禁、引用语义和蛋白库 RAG 模型选择见
 `--worker-config configs/protbind-workers.toml`。当前精确白名单的 23 个受限工具已完成 MCP 1.14
 stdio 真实 initialize/list-tools 握手与权限回归。普通 public-data fetch 与 accession-only
 UniProt 验证是仅有的受控网络表面，
-只接受白名单 source/公开 ID/精确域名批准；`case_dossier` 与 `case_pose_view` 仍为只读、无坐标工具。本机 OpenCode 1.18.8
-已完成 DeepSeek V4 Flash 的无工具云端传输冒烟测试。HipFire TUI 端到端对话仍须在本地模型服务
-启动后单独验收。
+只接受白名单 source/公开 ID/精确域名批准；`case_dossier` 与 `case_pose_view` 仍为只读、无坐标工具。
+本机 OpenCode 1.18.8 已完成 DeepSeek V4 Flash 的无工具云端传输冒烟测试。内置 Agent 已用本地
+HipFire/Qwen3.5-9B 在 W7900 上完成流式结构化工具调用烟测；DeepSeek 仍只可作为公开数据的协议
+bootstrap，不能进入 Radeon 性能证据。
+
+内置 Agent 不做 MCP discovery，而是把同一个 `ProtBindMCPService` 映射为固定 `ToolSpec`
+白名单。只读状态/报告工具无需确认；联网、创建/推进案例、附件、私有库、知识导入/RAG 同步和经验
+写入每次都显示读/写/网络/科学状态影响及恢复方式，并要求新的确认。`case_advance` 仍必须消费刚由
+`case_status` 签发的一次性 continuation token，且一次只推进一个阶段。
+
+`memory_write` 不接受模型提供候选、分数或结论。它只从深审计通过的 `REPORTED` manifest
+确定性派生 experience artifact；检索投影只能作为历史提示，不会自动改变 box、seed、筛选阈值或
+证据等级。完整的 Agent、HIP screening 和 benchmark 操作见
+[P0 垂直闭环说明](DOCs/PROTBIND_P0_VERTICAL_CLOSURE.md)。
 
 OpenCode 1.18.8 本身没有列出 PDF 文字提取或 OCR 内建工具；ProtBind 因而没有开放通用 bash，
 而是提供受限的 `knowledge_document_inspect/import/search`。PDF 逐页先比较 PyMuPDF 与本机

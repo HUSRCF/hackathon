@@ -4,8 +4,8 @@
 
 比赛主环境采用共享基座加轻量覆盖层：AIAA 提供经过验证的 Python 3.12、ROCm PyTorch、RDKit、
 Gemmi、OpenMM、PDBFixer、FastAPI 和旧 ESMFold；仓库内的
-`.venv-aiaa-protbind` 只补充 Vina/Meeko、PoseBusters、ProLIF、sPyRMSD、seekdb、BGE-M3 与
-Dimorphite-DL 微状态枚举。这样不会复制约 37 GiB 的 AIAA，也不会修改其 ROCm 栈。
+`.venv-aiaa-protbind` 只补充 Vina/Meeko、PoseBusters、ProLIF、sPyRMSD、seekdb、embedding
+adapter 与 Dimorphite-DL 微状态枚举。这样不会复制约 37 GiB 的 AIAA，也不会修改其 ROCm 栈。
 
 OpenFold3 使用另一个约 36 MiB 的 `.venv-aiaa-openfold3`，但继承 AIAA 的
 Torch `2.12.1+rocm7.2` 和 Triton `3.7.1`。官方 0.4.3 ROCm 验证器（包括 Evoformer
@@ -48,8 +48,10 @@ FlagEmbedding 自动导入 TensorFlow。确实需要预取公开模型时，只�
 
 本机 `pdftotext`/`pdftoppm` 来自 Poppler，可用于有文字层 PDF；当前没有 Tesseract/OCRmyPDF，
 所以扫描页会在 extraction receipt 中明确标成 unresolved。不要为此替换 AIAA Torch。BGE-M3
-沿用现有 CPU adapter；Qwen3-Embedding-0.6B 只作为可选的独立兼容性 overlay，当前
-Transformers 4.48.1 未通过其 `>=4.51.0` 门禁。
+沿用现有 CPU adapter；Qwen3-Embedding-0.6B 使用固定的
+`transformers 5.6.2 / huggingface-hub 1.12.0 / tokenizers 0.22.2` 轻量兼容层，继续复用 AIAA
+`torch 2.12.1+rocm7.2`。本机已用哈希冻结的 0.6B 模型完成公开 Markdown 的 seekdb 导入和检索
+烟测；这证明环境/协议可执行，不是检索质量 bake-off。
 
 ```bash
 scripts/aiaa-protbind.sh -m protbind_agent knowledge inspect paper.pdf \
@@ -111,9 +113,13 @@ attestation。独立 reference pose 只能在 `DOCKED` 后附加并标为 `VALID
 
 ## 依赖边界
 
-覆盖层的直接版本（包括固定的 Dimorphite-DL）在 `requirements/aiaa-protbind-overlay.txt`，实装传递依赖在
+覆盖层的直接版本（包括固定的 Dimorphite-DL 和 Qwen embedding 兼容层）在
+`requirements/aiaa-protbind-overlay.txt`，实装传递依赖在
 `requirements/aiaa-protbind-overlay.lock.txt`。官方 Vina 二进制的来源和 SHA-256
 记录在 `tools/README.md`；二进制本身不进入版本库。
+
+两个 requirements 都刻意不列 `torch`、`triton` 或 ROCm wheel。升级 Transformers 不是 Torch
+不兼容的证据，也不授权 pip 替换共享 AIAA 的 GPU 栈。
 
 OpenFold3 的小覆盖层分别由 `requirements/aiaa-openfold3-overlay.txt` 和
 `requirements/aiaa-openfold3-overlay.lock.txt` 冻结。它刻意不列出 Torch、Triton、

@@ -365,8 +365,11 @@ stage record 与 postflight acceptance，`case_pose_view` 只返回无坐标的 
 QA 摘要；两者都不能修改 manifest 或推进阶段。所有路径必须位于 project root，network-enabled case
 也会被 MCP create 拒绝。OpenCode 项目配置只启用本地 HipFire 与该 MCP，mutating tools 均为
 `ask`，私有库连读取也要求 `ask` 加工具内 fresh consent，其他工具默认 `deny`。MCP 1.14 的 AIAA
-stdio 已完成真实 initialize/list-tools 握手；OpenCode
-可执行文件和 HipFire 对话尚未在当前宿主实跑，因此这只是协议/权限闭环证据，不是完整交互 demo。
+stdio 已完成真实 initialize/list-tools 握手。内置 `protbind agent` 不依赖 OpenCode/MCP
+discovery：它把同一个 service 映射为固定 ToolSpec 白名单，每个 mutating/private-data 调用仍要求
+新确认。本地 HipFire/Qwen3.5-9B 已在 W7900 上完成流式
+`case_status → knowledge_search → memory_write` 结构化工具烟测；正式提交用 benchmark 仍须在
+干净 revision 上完成三次测量并通过引用/工具成功率门。
 
 ## 5. 失败和降级矩阵
 
@@ -408,17 +411,17 @@ ESMFold v1 的 24 aa 本机 smoke 峰值约 7.91 GiB，但这不是 700 aa 上�
 | ESMFold v1 | AIAA + 单 W7900 24 aa 离线真实推理通过；最终 receipt 为 26.112 s load、3.653 s inference、37.425 s end-to-end；须在 RECEPTOR_READY 前 attach receipt，自动调度待接 |
 | ESMFold2 / AlphaFold DB | 无 ESMFold2 runnable worker；AlphaFold DB accession-only 候选获取已实现，但尚未自动接入 receptor resolver |
 | TriPharm CPU、三模式/RRF | 已实现；三模式 protocol smoke 到 `SCREENED` |
-| persisted-index TriPharm HIP top 512 | kernel microbenchmark 已通过；完整 backend 待接 |
+| persisted-index TriPharm HIP top 512 | 生产 adapter 已接：真实 SQLite index 导出、HIP prefilter、CPU exact finalize，并与不受限 CPU reference 比较完整 top-k molecule ID 顺序；全等才提交 HIP，否则 auto 明确回落 CPU、强制 hip 模式可恢复失败。小型 gfx1100 实跑 parity 已通过；100k 性能门仍待冻结数据集重跑 |
 | schema-2 main state / optional cofold task | 已实现；schema 1 只读，DOCKED 不再依赖 cofold |
 | scaffold/microstate/quick-Vina selection | config 2.5/profile 1.3/input producer 1.2/box receipt 2.0、原子重叠 coordinate-frame plausibility 门、独立 site-derivation evidence、known-site calibration consumer、全谱系、自动 CPU-only worker、精确 success/failure 覆盖、完整输出闭包、缓存恢复和 top-16 finalizer 已实现；v4 direct smoke 为 3/3、36-entry closure，但仅 application-offline/unverified-chemistry；历史 verified-chemistry production run 在 bubblewrap namespace 建立处 fail closed；P2Rank 受控 CLI/CSV hypothesis adapter 已接，fpocket/P2Rank 共识与自动 box 调度待接 |
 | evidence-grade Vina | worker 可直接消费 SELECTED；规范 SDF、原始 PDBQT 和逐候选失败均已绑定 |
 | OpenFold3 | 官方 ROCm runtime validator 通过；checkpoint/真实 inference 未运行；仅有 cofold batch 验证器，无公开 batch builder/CLI，保持专家导入的可选旁路 |
 | validation | docking-derived batch/toolchain、pose/receptor attestation 已实现；原始 fixed-ten 为 8 completed/2 failed、top-1/top-5 7/10；`repair-protocol-v1` 为 9 completed/1 failed、独立 8/10；`repair-protocol-v2-restrained-sidechain` 为 10/10 completed、独立 top-1/top-5 9/10、IFP mean/median 0.6598/0.7014、`gate_complete=true`；三版结果分别保留，v2 仍是已观察 holdout 上的受控修订 |
 | deterministic report | 最终 Markdown/HTML 已实现；任意 checkpoint 的 JSON/Markdown/HTML run dossier 已接，区分 computed 与 accepted |
-| seekdb/PDF/embedding | PyMuPDF+Poppler 逐页提取、扫描页/OCR fail-closed 回执、scope-bound hybrid search、BGE-M3 本地权重门和六个 ask-only knowledge/library-RAG MCP 工具已实现；Tesseract 和完整资料集未安装/导入 |
+| seekdb/PDF/embedding | PyMuPDF+Poppler 逐页提取、扫描页/OCR fail-closed 回执、scope-bound hybrid search、BGE-M3 本地权重门和六个 ask-only knowledge/library-RAG MCP 工具已实现；Qwen3-Embedding-0.6B 已在复用 AIAA Torch 的轻量 Transformers overlay 中完成本地 seekdb 导入烟测；Tesseract 和完整资料集未安装/导入 |
 | 私有 protein/ligand library | 独立用户根目录、SHA-256 CAS、SQLite catalog、scan/apply 收据、copy/move 二次确认、QC/quarantine、UniProt accession-only 本地比对、脱敏 RAG 投影、完整 CLI、八个 ask-only MCP 工具与 project skill 已实现 |
 | P2Rank / DrutAI | P2Rank 受控运行与 CSV hypothesis parser 已实现，尚未进入 fpocket 共识主链；DrutAI 因环境/许可证/模型 provenance/bake-off 门禁保持 annotation-only 且默认禁用 |
-| HipFire/OpenCode/PowerMem | 受限 stdio MCP、逐阶段 gate/acceptance receipt、OpenCode default-deny 配置和 research/library project skills 已实现，MCP 1.14 握手通过；OpenCode executable/HipFire TUI 实跑与 PowerMem 仍待完成 |
+| HipFire/OpenCode/memory | 受限 stdio MCP、逐阶段 gate/acceptance receipt、OpenCode default-deny 配置、project skills 和不依赖 OpenCode 的内置 Agent 已实现；HipFire/Qwen 流式工具调用实跑通过。确定性 experience artifact + SQLite 检索投影已接；PowerMem 因依赖污染保持可选隔离项 |
 | 六页 Web UI | 已接真实 run dossier、pose 列表、loopback receptor/ligand view、box/pocket styles 和浏览器 PNG；3Dmol.js 2.5.4 有固定 URL/SHA-256/许可证安装器，仍待公开真实复合物浏览器验收 |
 
 下一组实现应按以下顺序进行：

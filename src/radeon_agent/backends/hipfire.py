@@ -5,6 +5,7 @@ HipFire implementation code and talks only to its OpenAI-compatible HTTP API.
 """
 
 import json
+from pathlib import Path
 
 from .base import BackendError
 from .openai_compatible import OpenAICompatibleBackend
@@ -39,5 +40,14 @@ class HipFireBackend(OpenAICompatibleBackend):
         redacted: dict = {}
         for key, value in payload.items():
             sensitive = any(word in key.lower() for word in ("token", "key", "secret"))
-            redacted[key] = "<redacted>" if sensitive else value
+            if sensitive:
+                redacted[key] = "<redacted>"
+            elif (
+                key.lower() in {"model", "path", "model_path"}
+                and isinstance(value, str)
+                and Path(value).is_absolute()
+            ):
+                redacted[key] = Path(value).name
+            else:
+                redacted[key] = value
         return redacted

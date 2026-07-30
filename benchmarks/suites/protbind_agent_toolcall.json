@@ -1,0 +1,10 @@
+{
+  "schema_version": "1.0",
+  "id": "protbind-agent-reported-case-toolcall-v1",
+  "required_tools": [
+    "case_status",
+    "knowledge_search",
+    "memory_write"
+  ],
+  "prompt_template": "这是一个已获操作者逐调用确认的本地公开演示。请分析蛋白质研究请求，不上传任何序列。必须先调用 case_status 检查 run_id={run_id}；再调用 knowledge_search 检索“{knowledge_query}”，scope=evidence；然后调用 memory_write，从同一个已完成 run 派生经验并记录用户偏好“{preference}”。完成这三个工具后不得再次调用任何工具，必须立即给出最终回答。用中文简要总结各工具是否成功、当前科学状态和证据边界，并至少逐字引用一个工具返回的 sha256: artifact ID。不得把 Vina 分数说成实验亲和力，也不得把检索或经验当作科学验证。"
+}

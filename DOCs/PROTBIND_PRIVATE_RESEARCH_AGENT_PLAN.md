@@ -571,9 +571,9 @@ mismatch 0、分配 28,401,280 bytes VRAM。一次 7-repetition 运行的 CPU �
 |---|---|---|
 | 7/21–22 | schema/interface、OpenFold3/ESMFold2 bake-off | schema-2 Vina-first 状态机和可选 cofold task、协议及 pinned OpenFold3 adapter contract 完成；AIAA-backed 官方 ROCm validator 已通过；无公开 cofold batch builder，真实 checkpoint/三复合物 bake-off 未运行，ESMFold2 future-only |
 | 7/23–25 | 输入、ESMFold v1、index、CPU | 输入、optional RDKit/Gemmi、index/CPU 完成；ESMFold v1 adapter 已以 hash-pinned 三权重集在单张 W7900 完成 24 aa 断网 warm 烟测（8,496,247,808 bytes allocated VRAM；26.112 s load、3.653 s inference、37.425 s end-to-end），目前是 receipt attach 而非自动调度，且尚非 benchmark、准确率或官方字节等价验证 |
-| 7/26–28 | HIP、top-k、gfx1100 profile | triangle matcher 已实跑；persisted-index/top-k 未接 |
+| 7/26–28 | HIP、top-k、gfx1100 profile | triangle matcher 与 persisted-index production query 均已接；HIP prefilter 后由 CPU exact finalize，并与不受限 CPU reference 做完整 top-k ID 顺序门禁；小型真实 gfx1100 parity 通过，100k 固定库端到端性能仍待重跑 |
 | 7/29–31 | Vina/PB/ProLIF/OpenMM | Vina canonical-SDF/PDBQT、pose/receptor receipts、selection 2.5/quick 1.3/input 1.2/box receipt 2.0、site evidence、known-site calibration consumer、validation lineage 及 v4 direct smoke 已实现；原始 fixed-ten 为 7/10，v1 为 8/10，受约束侧链 v2 为 10/10 completed、独立 9/10 且 revision gate complete；独立 local-crop ProLIF/strain/clash 完成，新的 prospective 外部集、production isolation 和 OpenMM HIP 仍未完成 |
-| 8/1–2 | seekdb/PowerMem/BGE-M3/HipFire | seekdb+BGE gate、default-deny OpenCode research/library skills、受限 MCP 与逐阶段闭环 gate/acceptance receipt 完成；独立蛋白/配体 CAS catalog、scan/apply/move 收据、UniProt identity states 和完整 CLI 已接；DrutAI 因环境/许可证/模型 provenance/bake-off 门禁保持禁用；OpenCode/HipFire TUI 实跑与 PowerMem 报告器未接 |
+| 8/1–2 | seekdb/PowerMem/BGE-M3/HipFire | seekdb、BGE/Qwen embedding gate、default-deny OpenCode skills、受限 MCP、内置 ToolSpec Agent、流式工具调用、逐阶段 gate/acceptance receipt 和确定性 experience memory 完成；Qwen3.5-9B/HipFire 已在 W7900 实跑结构化工具 smoke。PowerMem 因依赖污染保持隔离可选项；干净 revision 的三次正式 Agent benchmark receipt 待冻结 |
 | 8/3 | Web、3D、报告、demo | 最终报告 + checkpoint dossier、真实 pose scene、无坐标 Agent QA、loopback 3Dmol/PNG 与固定 asset 安装器已接；公开真实复合物浏览器验收和完整 demo 未完成 |
 | 8/4–6 | 1/2/4×gfx1100 调度、回归、许可、复现、提交；gfx1201 可选 | 未执行 |
 

@@ -1,6 +1,15 @@
 [screening]
 top_k = 512
 rrf_k = 60
+backend = "auto"
+hip_executable = "build/tripharm_hip/tripharm_hip_query"
+parity_top_k = 512
+hip_timeout_seconds = 600
+
+# auto attempts the production HIP prefilter, runs the exact CPU reference, and commits HIP only
+# when the top-512 molecule_id order is identical. An unavailable executable or failed parity is
+# an explicit cpu-reference fallback in the stage receipt. backend="hip" instead fails the stage
+# recoverably. Relative executable paths are resolved from the protbind process working directory.
 
 # Replace every placeholder digest with a measured lowercase SHA-256. Commands are argv arrays;
 # they are never executed through a shell. Production workers require bubblewrap network isolation.

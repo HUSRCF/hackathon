@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import math
+import struct
+import subprocess
+from pathlib import Path
 
 from protbind_agent.fusion import reciprocal_rank_fusion
 from protbind_agent.tripharm import (
@@ -15,6 +18,7 @@ from protbind_agent.tripharm import (
     rigid_transform,
     select_query_triangles,
 )
+from protbind_agent.tripharm_hip import query_index_hip
 
 
 def _features(offset: float = 0.0, distortion: float = 0.0):
@@ -169,3 +173,60 @@ def test_conflicting_triangle_correspondences_do_not_inflate_coverage(tmp_path) 
     assert len(
         {query_index for match in hit.matches for query_index in match.query_feature_indices}
     ) == 3
+
+
+def test_hip_prefilter_contract_commits_only_after_exact_cpu_parity(
+    tmp_path, monkeypatch
+) -> None:
+    index = tmp_path / "library.sqlite"
+    build_index(
+        [
+            _molecule("exact", _features(offset=10.0)),
+            _molecule("near", _features(offset=-5.0, distortion=0.4)),
+        ],
+        index,
+    )
+    executable = tmp_path / "tripharm_hip_query"
+    executable.write_text("#!/bin/sh\n", encoding="utf-8")
+    executable.chmod(0o700)
+
+    def fake_run(argv, **_kwargs):
+        request = Path(argv[2]).read_bytes()
+        _magic, _schema, _triangles, molecule_count, query_count, _tolerance = (
+            struct.unpack_from("<8sIIIIf", request)
+        )
+        masks = struct.pack(f"<{molecule_count}Q", *([1] * molecule_count))
+        errors = bytes(molecule_count * query_count * 4)
+        Path(argv[4]).write_bytes(
+            struct.pack(
+                    "<8sIII",
+                    b"TPHIPO1\0",
+                    1,
+                    molecule_count,
+                    query_count,
+                )
+            + masks
+            + errors
+        )
+        return subprocess.CompletedProcess(
+            argv,
+            0,
+            stdout=(
+                '{"architecture":"gfx1100","kernel_seconds":0.001,'
+                '"matched_molecules":2}'
+            ),
+            stderr="",
+        )
+
+    monkeypatch.setattr("protbind_agent.tripharm_hip.subprocess.run", fake_run)
+
+    result = query_index_hip(
+        index,
+        _features(),
+        executable=executable,
+        top_k=2,
+    )
+
+    assert [hit.molecule_id for hit in result.hits] == ["exact", "near"]
+    assert result.receipt["ranked_molecule_ids_exact"] is True
+    assert result.receipt["committed_backend"] == "hip"

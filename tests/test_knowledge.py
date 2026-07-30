@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -163,10 +165,15 @@ def test_library_rag_projection_excludes_private_values_and_paths(tmp_path: Path
 
 def test_seekdb_scope_filter_is_applied_to_both_hybrid_branches() -> None:
     class FakeCollection:
-        request: dict[str, object]
+        lexical: dict[str, object]
+        vector: dict[str, object]
 
-        def hybrid_search(self, **kwargs):  # noqa: ANN003, ANN202
-            self.request = kwargs
+        def get(self, **kwargs):  # noqa: ANN003, ANN202
+            self.lexical = kwargs
+            return {"ids": [], "documents": [], "metadatas": []}
+
+        def query(self, **kwargs):  # noqa: ANN003, ANN202
+            self.vector = kwargs
             return {"ids": [[]], "documents": [[]], "metadatas": [[]]}
 
     store = SeekDBKnowledgeStore.__new__(SeekDBKnowledgeStore)
@@ -174,8 +181,72 @@ def test_seekdb_scope_filter_is_applied_to_both_hybrid_branches() -> None:
 
     assert store.search("kinase structure", scope="protein-library") == []
     expected = {"scope": {"$eq": "protein-library"}}
-    assert store.collection.request["query"]["where"] == expected
-    assert store.collection.request["knn"]["where"] == expected
+    assert store.collection.lexical["where"] == expected
+    assert store.collection.vector["where"] == expected
+
+
+def test_seekdb_hybrid_search_uses_deterministic_client_side_rrf() -> None:
+    class FakeCollection:
+        def get(self, **_kwargs):  # noqa: ANN202
+            return {
+                "ids": ["lexical", "shared"],
+                "documents": ["lexical text", "shared text"],
+                "metadatas": [{"scope": "evidence"}, {"scope": "evidence"}],
+            }
+
+        def query(self, **_kwargs):  # noqa: ANN202
+            return {
+                "ids": [["shared", "vector"]],
+                "documents": [["shared text", "vector text"]],
+                "metadatas": [[{"scope": "evidence"}, {"scope": "evidence"}]],
+            }
+
+    store = SeekDBKnowledgeStore.__new__(SeekDBKnowledgeStore)
+    store.collection = FakeCollection()
+
+    result = store.search("scientific boundary", scope="evidence")
+
+    assert [item["id"] for item in result] == ["shared", "lexical", "vector"]
+
+
+def test_seekdb_store_creates_named_database_before_opening_client(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    events: list[tuple[str, str]] = []
+
+    class FakeAdmin:
+        def __init__(self, *, path: str) -> None:
+            events.append(("admin", path))
+
+        def list_databases(self):  # noqa: ANN201
+            return []
+
+        def create_database(self, name: str) -> None:
+            events.append(("create", name))
+
+    class FakeClient:
+        def __init__(self, *, path: str, database: str) -> None:
+            events.append(("client", database))
+
+        def get_or_create_collection(self, name: str, **_kwargs):  # noqa: ANN201
+            events.append(("collection", name))
+            return object()
+
+    monkeypatch.setitem(
+        sys.modules,
+        "pyseekdb",
+        SimpleNamespace(AdminClient=FakeAdmin, Client=FakeClient),
+    )
+    monkeypatch.setattr(
+        "protbind_agent.knowledge._embedding_function",
+        lambda _path: SimpleNamespace(manifest_sha256="a" * 64),
+    )
+
+    SeekDBKnowledgeStore(tmp_path / "workspace", tmp_path / "model")
+
+    assert ("create", "protbind") in events
+    assert events.index(("create", "protbind")) < events.index(("client", "protbind"))
 
 
 def test_library_projection_replaces_its_scope_before_upsert() -> None:

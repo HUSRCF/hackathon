@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass
+from typing import Any
 
 from .backends.base import LLMBackend
-from .models import ChatRequest, ChatResponse, Message, Usage
+from .models import ChatRequest, Message, StreamTiming, Usage
 from .tools import ToolRegistry
 
 DEFAULT_SYSTEM_PROMPT = """You are a private local assistant running on an AMD Radeon GPU.
@@ -16,7 +17,14 @@ and make uncertainty explicit."""
 
 
 class AgentLimitError(RuntimeError):
-    pass
+    def __init__(
+        self,
+        message: str,
+        *,
+        tool_call_trace: tuple[tuple[str, ...], ...] = (),
+    ) -> None:
+        super().__init__(message)
+        self.tool_call_trace = tool_call_trace
 
 
 @dataclass(frozen=True, slots=True)
@@ -27,6 +35,15 @@ class AgentResult:
     tool_calls: int
     elapsed_seconds: float
     usage: Usage
+    model_timings: tuple[StreamTiming, ...] = ()
+    model_usages: tuple[Usage, ...] = ()
+    tool_results: tuple[ToolExecution, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class ToolExecution:
+    name: str
+    ok: bool
 
 
 def _sum_optional(left: int | None, right: int | None) -> int | None:
@@ -46,6 +63,8 @@ class Agent:
         max_steps: int = 6,
         timeout_seconds: float = 300.0,
         max_tokens: int = 2048,
+        stream: bool = False,
+        request_extra: dict[str, Any] | None = None,
     ) -> None:
         if max_steps < 1:
             raise ValueError("max_steps must be >= 1")
@@ -58,6 +77,8 @@ class Agent:
         self.max_steps = max_steps
         self.timeout_seconds = timeout_seconds
         self.max_tokens = max_tokens
+        self.stream = stream
+        self.request_extra = dict(request_extra or {})
 
     def run(self, user_input: str) -> AgentResult:
         if not user_input.strip():
@@ -69,19 +90,31 @@ class Agent:
         ]
         tool_call_count = 0
         total_usage = Usage()
+        model_timings: list[StreamTiming] = []
+        model_usages: list[Usage] = []
+        tool_call_trace: list[tuple[str, ...]] = []
+        tool_results: list[ToolExecution] = []
 
         for model_calls in range(1, self.max_steps + 1):
             if time.monotonic() - start > self.timeout_seconds:
-                raise AgentLimitError("agent timeout exceeded")
-            response: ChatResponse = self.backend.complete(
-                ChatRequest(
-                    model=self.model,
-                    messages=tuple(messages),
-                    temperature=0.0,
-                    max_tokens=self.max_tokens,
-                    tools=self.tools.schemas(),
+                raise AgentLimitError(
+                    "agent timeout exceeded",
+                    tool_call_trace=tuple(tool_call_trace),
                 )
+            request = ChatRequest(
+                model=self.model,
+                messages=tuple(messages),
+                temperature=0.0,
+                max_tokens=self.max_tokens,
+                tools=self.tools.schemas(),
+                extra=self.request_extra,
             )
+            if self.stream:
+                response, timing = self.backend.stream_complete(request)
+                model_timings.append(timing)
+            else:
+                response = self.backend.complete(request)
+            model_usages.append(response.usage)
             total_usage = Usage(
                 prompt_tokens=_sum_optional(
                     total_usage.prompt_tokens, response.usage.prompt_tokens
@@ -98,6 +131,7 @@ class Agent:
                     tool_calls=response.tool_calls,
                 )
             )
+            tool_call_trace.append(tuple(call.name for call in response.tool_calls))
             if not response.tool_calls:
                 return AgentResult(
                     answer=response.content,
@@ -106,11 +140,15 @@ class Agent:
                     tool_calls=tool_call_count,
                     elapsed_seconds=time.monotonic() - start,
                     usage=total_usage,
+                    model_timings=tuple(model_timings),
+                    model_usages=tuple(model_usages),
+                    tool_results=tuple(tool_results),
                 )
 
             for call in response.tool_calls:
                 tool_call_count += 1
                 result = self.tools.execute(call.name, call.arguments)
+                tool_results.append(ToolExecution(name=call.name, ok=result.ok))
                 messages.append(
                     Message(
                         role="tool",
@@ -120,6 +158,12 @@ class Agent:
                     )
                 )
 
+        rendered_trace = " > ".join(
+            ",".join(names) if names else "<final>"
+            for names in tool_call_trace
+        )
         raise AgentLimitError(
-            f"agent reached max_steps={self.max_steps} before producing a final answer"
+            f"agent reached max_steps={self.max_steps} before producing a final "
+            f"answer; tool-call trace: {rendered_trace}",
+            tool_call_trace=tuple(tool_call_trace),
         )

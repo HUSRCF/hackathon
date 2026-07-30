@@ -72,6 +72,33 @@ def test_streaming_response_tracks_first_content(monkeypatch: pytest.MonkeyPatch
     assert timing.total_seconds >= timing.time_to_first_token_seconds
 
 
+def test_streaming_response_aggregates_fragmented_tool_calls(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    backend = OpenAICompatibleBackend("http://127.0.0.1:9999/v1")
+    sse = (
+        b'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"call_",'
+        b'"function":{"name":"case_","arguments":"{\\"run"}}]}}]}\n\n'
+        b'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"1",'
+        b'"function":{"name":"status","arguments":"_id\\":\\"run-1\\"}"}}]},'
+        b'"finish_reason":"tool_calls"}]}\n\n'
+        b'data: {"choices":[],"usage":{"prompt_tokens":4,"completion_tokens":6,'
+        b'"total_tokens":10}}\n\n'
+        b"data: [DONE]\n\n"
+    )
+    monkeypatch.setattr(backend, "_request", lambda *_args, **_kwargs: io.BytesIO(sse))
+
+    result, timing = backend.stream_complete(
+        ChatRequest(model="demo", messages=(Message(role="user", content="status"),))
+    )
+
+    assert result.tool_calls[0].id == "call_1"
+    assert result.tool_calls[0].name == "case_status"
+    assert result.tool_calls[0].arguments == {"run_id": "run-1"}
+    assert result.usage.total_tokens == 10
+    assert timing.time_to_first_token_seconds is not None
+
+
 def test_invalid_tool_json_is_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
     backend = OpenAICompatibleBackend("http://127.0.0.1:9999/v1")
     payload = {
@@ -110,7 +137,11 @@ def test_hipfire_health_redacts_server_token(monkeypatch: pytest.MonkeyPatch) ->
         backend,
         "_request",
         lambda *_args, **_kwargs: _json_response(
-            {"status": "ok", "model": "demo", "token": "do-not-print"}
+            {
+                "status": "ok",
+                "model": "/private/models/demo.hfq",
+                "token": "do-not-print",
+            }
         ),
     )
 
@@ -118,6 +149,7 @@ def test_hipfire_health_redacts_server_token(monkeypatch: pytest.MonkeyPatch) ->
 
     assert health["status"] == "ok"
     assert health["token"] == "<redacted>"
+    assert health["model"] == "demo.hfq"
 
 
 def test_deepseek_forces_non_thinking_mode(monkeypatch: pytest.MonkeyPatch) -> None:

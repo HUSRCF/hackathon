@@ -14,9 +14,18 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit, urlunsplit
 
+from radeon_agent.agent import AgentLimitError
+from radeon_agent.backends import BackendError
+
 from . import __version__
+from .agent_benchmark import (
+    AgentBenchmarkConfig,
+    run_agent_benchmark,
+    save_agent_benchmark,
+)
+from .agent_runtime import create_runtime
 from .artifacts import ArtifactStore, sha256_file
-from .benchmark import benchmark_cpu, save_benchmark
+from .benchmark import benchmark_cpu, benchmark_hip, save_benchmark
 from .capabilities import doctor_report
 from .caseio import ingest_case
 from .chemistry import ChemistryCapabilityError, load_chemical_library
@@ -182,9 +191,20 @@ def _worker_config(path: Path | None) -> PipelineConfig:
     screening = value.get("screening", {})
     if not isinstance(screening, dict):
         raise ValueError("[screening] must be a TOML table")
+    hip_executable_value = screening.get("hip_executable")
+    if hip_executable_value is not None and not isinstance(
+        hip_executable_value, str
+    ):
+        raise ValueError("screening.hip_executable must be a path string")
     return PipelineConfig(
         screen_top_k=int(screening.get("top_k", 512)),
         rrf_k=int(screening.get("rrf_k", 60)),
+        screen_backend=str(screening.get("backend", "auto")),
+        hip_executable=(
+            Path(hip_executable_value) if hip_executable_value else None
+        ),
+        parity_top_k=int(screening.get("parity_top_k", 512)),
+        hip_timeout_seconds=int(screening.get("hip_timeout_seconds", 600)),
         workers=workers,
     )
 
@@ -262,6 +282,96 @@ def _build_parser() -> argparse.ArgumentParser:
     commands = parser.add_subparsers(dest="command", required=True)
 
     commands.add_parser("doctor", help="Probe scientific runtimes and Radeon evidence.")
+
+    agent = commands.add_parser(
+        "agent",
+        help="Run the standalone, confirmation-gated local ProtBind Agent.",
+    )
+    agent.add_argument(
+        "prompt",
+        nargs="?",
+        help="One research request. If omitted, read it interactively from stdin.",
+    )
+    agent.add_argument("--backend", choices=("hipfire",), default="hipfire")
+    agent.add_argument("--model", default="qwen3.5:9b")
+    agent.add_argument("--base-url", default="http://127.0.0.1:11435/v1")
+    agent.add_argument("--project-root", type=Path, default=Path("."))
+    agent.add_argument("--library-config", type=Path)
+    agent.add_argument("--knowledge-model", type=Path)
+    agent.add_argument("--worker-config", type=Path)
+    agent.add_argument("--max-steps", type=int, default=16)
+    agent.add_argument("--json", action="store_true")
+    _workspace_argument(agent)
+
+    agent_benchmark = commands.add_parser(
+        "agent-benchmark",
+        help="Run the hash-bound HipFire tool-call workload on local Radeon.",
+    )
+    agent_benchmark.add_argument("--run-id", required=True)
+    agent_benchmark.add_argument("--knowledge-query", required=True)
+    agent_benchmark.add_argument("--preference", required=True)
+    agent_benchmark.add_argument("--knowledge-model", type=Path, required=True)
+    agent_benchmark.add_argument("--library-config", type=Path)
+    agent_benchmark.add_argument("--worker-config", type=Path)
+    agent_benchmark.add_argument("--project-root", type=Path, default=Path("."))
+    agent_benchmark.add_argument(
+        "--workload",
+        type=Path,
+        default=Path("benchmarks/suites/protbind_agent_toolcall.json"),
+    )
+    agent_benchmark.add_argument("--base-url", default="http://127.0.0.1:11435/v1")
+    agent_benchmark.add_argument("--model", default="qwen3.5:9b")
+    agent_benchmark.add_argument("--label", required=True)
+    agent_benchmark.add_argument("--model-revision", required=True)
+    agent_benchmark.add_argument("--model-sha256", required=True)
+    agent_benchmark.add_argument(
+        "--model-weights",
+        type=Path,
+        required=True,
+        help=(
+            "Exact local model file or directory; measured hash must equal "
+            "--model-sha256."
+        ),
+    )
+    agent_benchmark.add_argument("--quantization", required=True)
+    agent_benchmark.add_argument("--hipfire-revision", required=True)
+    agent_benchmark.add_argument(
+        "--hipfire-source-root",
+        type=Path,
+        required=True,
+        help="Clean local HipFire source checkout matching --hipfire-revision.",
+    )
+    agent_benchmark.add_argument(
+        "--hipfire-daemon",
+        type=Path,
+        required=True,
+        help="Exact running HipFire daemon binary; its process and SHA-256 are verified.",
+    )
+    agent_benchmark.add_argument("--hipfire-visible-device", type=int, required=True)
+    agent_benchmark.add_argument(
+        "--hipfire-speculation",
+        choices=("off", "auto", "ngram", "dflash", "mtp"),
+        required=True,
+    )
+    agent_benchmark.add_argument(
+        "--hipfire-jinja-mode",
+        choices=("default-on", "explicit-on", "explicit-off"),
+        required=True,
+    )
+    agent_benchmark.add_argument("--code-revision", required=True)
+    agent_benchmark.add_argument("--repetitions", type=int, default=3)
+    agent_benchmark.add_argument("--warmup-runs", type=int, default=1)
+    agent_benchmark.add_argument("--output", type=Path, required=True)
+    agent_benchmark.add_argument(
+        "--confirm-benchmark-data",
+        action="store_true",
+        required=True,
+        help=(
+            "Confirm this run may read the named local case/knowledge and write its "
+            "idempotent experience record."
+        ),
+    )
+    _workspace_argument(agent_benchmark)
 
     index = commands.add_parser("index", help="Build or inspect TriPharm indexes.")
     index_commands = index.add_subparsers(dest="index_command", required=True)
@@ -785,6 +895,11 @@ def _build_parser() -> argparse.ArgumentParser:
     benchmark.add_argument("--query", type=Path)
     benchmark.add_argument("--output", type=Path, required=True)
     benchmark.add_argument("--backend", choices=("cpu", "hip"), default="cpu")
+    benchmark.add_argument(
+        "--hip-executable",
+        type=Path,
+        help="Production tripharm_hip_query executable; required for --backend hip.",
+    )
     benchmark.add_argument("--repetitions", type=int, default=5)
     benchmark.add_argument("--warmup-runs", type=int, default=1)
     benchmark.add_argument("--top-k", type=int, default=512)
@@ -998,6 +1113,79 @@ def _run(args: argparse.Namespace) -> int:
     if args.command == "doctor":
         print(json.dumps(doctor_report(), ensure_ascii=False, indent=2))
         return 0
+
+    if args.command == "agent":
+        if args.backend != "hipfire":
+            raise ValueError("the built-in competition Agent currently supports HipFire only")
+        prompt = args.prompt
+        if prompt is None:
+            if sys.stdin.isatty():
+                prompt = input("ProtBind research request: ")
+            else:
+                prompt = sys.stdin.readline()
+        if not prompt or not prompt.strip():
+            raise ValueError("Agent prompt cannot be empty")
+        result = create_runtime(
+            workspace=args.workspace,
+            project_root=args.project_root,
+            model=args.model,
+            base_url=args.base_url,
+            library_config=args.library_config,
+            knowledge_model=args.knowledge_model,
+            pipeline_config=_worker_config(args.worker_config),
+            max_steps=args.max_steps,
+        ).run(prompt)
+        if args.json:
+            print(json.dumps(asdict(result), ensure_ascii=False, indent=2))
+        else:
+            print(result.answer)
+            if result.tool_timeline:
+                print(
+                    json.dumps(
+                        {"tool_timeline": result.tool_timeline},
+                        ensure_ascii=False,
+                        indent=2,
+                    ),
+                    file=sys.stderr,
+                )
+        return 0
+
+    if args.command == "agent-benchmark":
+        if not args.confirm_benchmark_data:
+            raise PermissionError("Agent benchmark requires explicit local-data confirmation")
+        result = run_agent_benchmark(
+            workspace=args.workspace,
+            project_root=args.project_root,
+            workload_path=args.workload,
+            run_id=args.run_id,
+            knowledge_query=args.knowledge_query,
+            preference=args.preference,
+            knowledge_model=args.knowledge_model,
+            model_weights=args.model_weights,
+            hipfire_source_root=args.hipfire_source_root,
+            hipfire_daemon=args.hipfire_daemon,
+            library_config=args.library_config,
+            pipeline_config=_worker_config(args.worker_config),
+            config=AgentBenchmarkConfig(
+                label=args.label,
+                model=args.model,
+                model_revision=args.model_revision,
+                model_sha256=args.model_sha256,
+                quantization=args.quantization,
+                hipfire_revision=args.hipfire_revision,
+                hipfire_visible_device=args.hipfire_visible_device,
+                hipfire_speculation=args.hipfire_speculation,
+                hipfire_jinja_mode=args.hipfire_jinja_mode,
+                code_revision=args.code_revision,
+                repetitions=args.repetitions,
+                warmup_runs=args.warmup_runs,
+            ),
+            base_url=args.base_url,
+        )
+        save_agent_benchmark(result, args.output)
+        print(json.dumps(result["summary"], ensure_ascii=False, indent=2))
+        print(f"saved: {args.output}", file=sys.stderr)
+        return 0 if result["evidence_eligible"] else 3
 
     if args.command == "index":
         if args.index_command == "inspect":
@@ -1724,17 +1912,24 @@ def _run(args: argparse.Namespace) -> int:
                 "flat benchmark mode requires --index, --query, and --output"
             )
         if args.backend == "hip":
-            raise ValueError(
-                "TriPharm HIP runner is not built/configured; "
-                "CPU results cannot be relabeled as HIP"
+            if args.hip_executable is None:
+                raise ValueError("--hip-executable is required for --backend hip")
+            result = benchmark_hip(
+                args.index,
+                args.query,
+                args.hip_executable,
+                repetitions=args.repetitions,
+                warmup_runs=args.warmup_runs,
+                top_k=args.top_k,
             )
-        result = benchmark_cpu(
-            args.index,
-            args.query,
-            repetitions=args.repetitions,
-            warmup_runs=args.warmup_runs,
-            top_k=args.top_k,
-        )
+        else:
+            result = benchmark_cpu(
+                args.index,
+                args.query,
+                repetitions=args.repetitions,
+                warmup_runs=args.warmup_runs,
+                top_k=args.top_k,
+            )
         save_benchmark(result, args.output)
         print(json.dumps(result["duration_seconds"], ensure_ascii=False, indent=2))
         return 0
@@ -1749,6 +1944,8 @@ def main(argv: list[str] | None = None) -> int:
         return _run(args)
     except (
         ChemistryCapabilityError,
+        BackendError,
+        AgentLimitError,
         FileExistsError,
         FileNotFoundError,
         KeyError,

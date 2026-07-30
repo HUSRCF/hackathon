@@ -755,6 +755,7 @@ def query_index(
     *,
     top_k: int = 512,
     tolerance_angstrom: float | None = None,
+    candidate_molecule_ids: set[str] | frozenset[str] | None = None,
 ) -> list[TriPharmHit]:
     if top_k < 1:
         raise ValueError("top_k must be >= 1")
@@ -800,6 +801,11 @@ def query_index(
                 ),
             )
             for molecule_id, conformer_id, feature_i, feature_j, feature_k in rows:
+                if (
+                    candidate_molecule_ids is not None
+                    and molecule_id not in candidate_molecule_ids
+                ):
+                    continue
                 all_candidate_features = _load_features(
                     connection, feature_cache, molecule_id, conformer_id
                 )

@@ -587,7 +587,13 @@ class SeekDBKnowledgeStore:
                 "pyseekdb is required; no fallback database may replace the authoritative store"
             ) from exc
         embedding = _embedding_function(model_path)
-        self.client = pyseekdb.Client(path=str(root / "seekdb"), database="protbind")
+        seekdb_path = str(root / "seekdb")
+        admin = pyseekdb.AdminClient(path=seekdb_path)
+        if "protbind" not in {
+            str(database.name) for database in admin.list_databases()
+        }:
+            admin.create_database("protbind")
+        self.client = pyseekdb.Client(path=seekdb_path, database="protbind")
         self.collection = self.client.get_or_create_collection(
             f"evidence_chunks_{embedding.manifest_sha256[:16]}",
             embedding_function=embedding,
@@ -644,35 +650,47 @@ class SeekDBKnowledgeStore:
         keyword_match = re.search(r"[\w\u4e00-\u9fff]{3,}", query)
         keyword = keyword_match.group(0) if keyword_match else query.strip()
         where = {"scope": {"$eq": scope}} if scope is not None else None
-        lexical: dict[str, Any] = {
-            "where_document": {"$contains": keyword},
-            "n_results": top_k * 2,
-        }
-        vector: dict[str, Any] = {"query_texts": [query], "n_results": top_k * 2}
-        if where is not None:
-            lexical["where"] = where
-            vector["where"] = where
-        result = self.collection.hybrid_search(
-            query=lexical,
-            knn=vector,
-            rank={"rrf": {}},
-            n_results=top_k,
+        include = ["documents", "metadatas"]
+        lexical = self.collection.get(
+            where_document={"$contains": keyword},
+            where=where,
+            limit=top_k * 2,
+            include=include,
         )
-        ids = result.get("ids", [[]])
-        documents = result.get("documents", [[]])
-        metadatas = result.get("metadatas", [[]])
-        id_values = ids[0] if ids and isinstance(ids[0], list) else ids
-        document_values = (
-            documents[0] if documents and isinstance(documents[0], list) else documents
+        vector = self.collection.query(
+            query_texts=[query],
+            where=where,
+            n_results=top_k * 2,
+            include=include,
         )
-        metadata_values = (
-            metadatas[0] if metadatas and isinstance(metadatas[0], list) else metadatas
-        )
+
+        def flattened(result: dict[str, Any], name: str) -> list[Any]:
+            values = result.get(name, [])
+            if values and isinstance(values[0], list):
+                return list(values[0])
+            return list(values)
+
+        ranked: dict[str, float] = {}
+        values_by_id: dict[str, tuple[str, dict[str, Any]]] = {}
+        for branch in (lexical, vector):
+            identifiers = flattened(branch, "ids")
+            documents = flattened(branch, "documents")
+            metadatas = flattened(branch, "metadatas")
+            for rank, (identifier, document, metadata) in enumerate(
+                zip(identifiers, documents, metadatas, strict=False),
+                start=1,
+            ):
+                key = str(identifier)
+                ranked[key] = ranked.get(key, 0.0) + 1.0 / (60 + rank)
+                values_by_id.setdefault(key, (str(document), dict(metadata)))
+        ordered = sorted(ranked, key=lambda identifier: (-ranked[identifier], identifier))
         return [
-            {"id": identifier, "text": document, "metadata": metadata}
-            for identifier, document, metadata in zip(
-                id_values, document_values, metadata_values, strict=False
-            )
+            {
+                "id": identifier,
+                "text": values_by_id[identifier][0],
+                "metadata": values_by_id[identifier][1],
+            }
+            for identifier in ordered[:top_k]
         ]
 
 

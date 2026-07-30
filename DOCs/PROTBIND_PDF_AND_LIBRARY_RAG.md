@@ -76,10 +76,11 @@ blocker。检索结果用于找候选条目，不用于推断结合、活性、�
 - `HF_HUB_OFFLINE=1` 与 `TRANSFORMERS_OFFLINE=1`；
 - 默认 CPU，避免占用折叠、TriPharm 或 OpenMM 的 gfx1100 资源。
 
-当前 AIAA 的 Transformers 4.48.1 未通过 Qwen 的 4.51.0 runtime 门，状态为
-`BLOCKED_RUNTIME_COMPATIBILITY`。这不是 Torch 缺失；ProtBind 不会自动安装 Torch、升级共享 AIAA
-环境或下载模型。后续应在独立轻量 overlay 中做相同语料的 recall、中文/英文检索质量、延迟、RAM
-和索引稳定性 bake-off，通过后才切换生产模型。
+项目 overlay 现固定 `transformers 5.6.2 / huggingface-hub 1.12.0 / tokenizers 0.22.2`，并复用
+AIAA 的 `torch 2.12.1+rocm7.2`；不会安装第二份 Torch、升级共享 AIAA 环境或自动下载模型。本机
+已用哈希冻结的 Qwen3-Embedding-0.6B 完成公开 Markdown 的 seekdb 导入/检索烟测，所以
+`BLOCKED_RUNTIME_COMPATIBILITY` 已解除。生产默认是否从 BGE-M3 切换仍须做同语料 recall、
+中英文检索质量、延迟、RAM 和索引稳定性 bake-off；环境 smoke 不能替代质量验收。
 
 预取和审核权重后，由操作者冻结本地目录；该命令只哈希，不加载模型，也不联网：
 

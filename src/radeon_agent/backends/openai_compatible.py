@@ -142,6 +142,7 @@ class OpenAICompatibleBackend:
         finish_reason: str | None = None
         model: str | None = None
         usage = Usage()
+        streamed_tool_calls: dict[int, dict[str, Any]] = {}
         with self._request("chat/completions", payload) as response:
             for raw_line in response:
                 line = raw_line.decode("utf-8", errors="replace").strip()
@@ -163,10 +164,28 @@ class OpenAICompatibleBackend:
                 for choice in chunk.get("choices") or []:
                     delta = choice.get("delta") or {}
                     piece = delta.get("content")
+                    reasoning_piece = delta.get("reasoning_content")
+                    if reasoning_piece and first_token_at is None:
+                        first_token_at = time.perf_counter()
                     if piece:
                         if first_token_at is None:
                             first_token_at = time.perf_counter()
                         content_parts.append(piece)
+                    for raw_call in delta.get("tool_calls") or []:
+                        if first_token_at is None:
+                            first_token_at = time.perf_counter()
+                        index = int(raw_call.get("index", 0))
+                        accumulated = streamed_tool_calls.setdefault(
+                            index,
+                            {"id": "", "name": "", "arguments": ""},
+                        )
+                        if raw_call.get("id"):
+                            accumulated["id"] += str(raw_call["id"])
+                        function = raw_call.get("function") or {}
+                        if function.get("name"):
+                            accumulated["name"] += str(function["name"])
+                        if function.get("arguments"):
+                            accumulated["arguments"] += str(function["arguments"])
                     finish_reason = choice.get("finish_reason") or finish_reason
         end = time.perf_counter()
         timing = StreamTiming(
@@ -175,9 +194,20 @@ class OpenAICompatibleBackend:
                 first_token_at - start if first_token_at is not None else None
             ),
         )
+        raw_calls = [
+            {
+                "id": value["id"] or f"call_{index}",
+                "function": {
+                    "name": value["name"],
+                    "arguments": value["arguments"] or "{}",
+                },
+            }
+            for index, value in sorted(streamed_tool_calls.items())
+        ]
         return (
             ChatResponse(
                 content="".join(content_parts),
+                tool_calls=self._parse_tool_calls(raw_calls),
                 usage=usage,
                 finish_reason=finish_reason,
                 model=model,

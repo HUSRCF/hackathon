@@ -77,6 +77,7 @@ from .tripharm import (
     query_index,
     read_index_metadata,
 )
+from .tripharm_hip import TriPharmHIPError, query_index_hip
 from .validation import classify_evidence
 from .validation_input import (
     build_validation_input_batch,
@@ -336,6 +337,10 @@ class WorkerConfig:
 class PipelineConfig:
     screen_top_k: int = 512
     rrf_k: int = 60
+    screen_backend: str = "auto"
+    hip_executable: Path | None = None
+    parity_top_k: int = 512
+    hip_timeout_seconds: int = 600
     workers: dict[RunState, WorkerConfig] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -343,6 +348,12 @@ class PipelineConfig:
             raise ValueError("screen_top_k must be >= 1")
         if self.rrf_k < 1:
             raise ValueError("rrf_k must be >= 1")
+        if self.screen_backend not in {"auto", "cpu", "hip"}:
+            raise ValueError("screen_backend must be auto, cpu, or hip")
+        if self.parity_top_k < self.screen_top_k:
+            raise ValueError("parity_top_k must be >= screen_top_k")
+        if self.hip_timeout_seconds < 1:
+            raise ValueError("hip_timeout_seconds must be >= 1")
         invalid = set(self.workers) - {
             RunState.SELECTED,
             RunState.COFOLDED,
@@ -1416,19 +1427,7 @@ class ProtBindWorkflow:
                 *query_artifacts.values(),
                 extra=case.mode.value,
             )
-            expected_config = sha256_bytes(
-                canonical_json_bytes(
-                    {
-                        "screen_top_k": self.config.screen_top_k,
-                        "rrf_k": self.config.rrf_k,
-                        "mode": case.mode.value,
-                        "query_sha256": {
-                            name: artifact.sha256
-                            for name, artifact in query_artifacts.items()
-                        },
-                    }
-                )
-            )
+            expected_config = self._screen_config_hash(case, query_artifacts)
             self._require_record_identity(
                 screened_record, expected_input, expected_config
             )
@@ -2894,14 +2893,18 @@ class ProtBindWorkflow:
         queries, query_artifacts = self._queries(
             case, receptor_structure=receptor
         )
-        branch_hits = {
-            name: query_index(
-                index_path,
-                features,
-                top_k=self.config.screen_top_k,
+        branch_hits: dict[str, list[TriPharmHit]] = {}
+        backend_receipts: dict[str, ArtifactRef] = {}
+        committed_backends: dict[str, str] = {}
+        for name, features in sorted(queries.items()):
+            hits, receipt = self._screen_branch(index_path, features)
+            branch_hits[name] = hits
+            committed_backends[name] = str(receipt["committed_backend"])
+            backend_receipts[name] = self.artifacts.put_json(
+                receipt,
+                producer="protbind.tripharm.backend-receipt",
+                producer_version=__version__,
             )
-            for name, features in sorted(queries.items())
-        }
         if case.mode is ResearchMode.BOTH:
             fused = reciprocal_rank_fusion(
                 branch_hits,
@@ -2944,6 +2947,11 @@ class ProtBindWorkflow:
             "query_artifacts": {
                 name: artifact.to_dict() for name, artifact in sorted(query_artifacts.items())
             },
+            "screening_backends": dict(sorted(committed_backends.items())),
+            "backend_receipts": {
+                name: artifact.to_dict()
+                for name, artifact in sorted(backend_receipts.items())
+            },
             "branch_rankings": {
                 name: [hit.molecule_id for hit in hits]
                 for name, hits in sorted(branch_hits.items())
@@ -2955,25 +2963,23 @@ class ProtBindWorkflow:
                 "planned_next": "scaffold diversity top 128, microstates, quick Vina",
             },
         }
+        unique_backends = set(committed_backends.values())
+        if unique_backends == {"hip"}:
+            producer = "protbind.tripharm.hip-assisted"
+        elif unique_backends == {"cpu-reference"}:
+            producer = "protbind.tripharm.cpu"
+        else:
+            producer = "protbind.tripharm.mixed"
         output = self.artifacts.put_json(
             payload,
-            producer="protbind.tripharm.cpu",
+            producer=producer,
             producer_version=__version__,
         )
-        screen_config_hash = sha256_bytes(
-            canonical_json_bytes(
-                {
-                    "screen_top_k": self.config.screen_top_k,
-                    "rrf_k": self.config.rrf_k,
-                    "mode": case.mode.value,
-                    "query_sha256": {
-                        name: artifact.sha256 for name, artifact in sorted(query_artifacts.items())
-                    },
-                }
-            )
-        )
+        screen_config_hash = self._screen_config_hash(case, query_artifacts)
         for name, artifact in query_artifacts.items():
             manifest.artifacts[f"query_{name}"] = artifact
+        for name, artifact in backend_receipts.items():
+            manifest.artifacts[f"screen_backend_{name}"] = artifact
         manifest.complete_stage(
             StageRecord.create(
                 RunState.SCREENED,
@@ -2987,6 +2993,108 @@ class ProtBindWorkflow:
                 duration_seconds=time.perf_counter() - started,
             )
         )
+
+    def _screen_config_hash(
+        self,
+        case: ResearchCase,
+        query_artifacts: dict[str, ArtifactRef],
+    ) -> str:
+        executable_sha256 = None
+        if self.config.hip_executable is not None:
+            executable = self.config.hip_executable.resolve()
+            if executable.is_file():
+                executable_sha256 = sha256_file(executable)
+        return sha256_bytes(
+            canonical_json_bytes(
+                {
+                    "screen_top_k": self.config.screen_top_k,
+                    "rrf_k": self.config.rrf_k,
+                    "mode": case.mode.value,
+                    "query_sha256": {
+                        name: artifact.sha256
+                        for name, artifact in sorted(query_artifacts.items())
+                    },
+                    "screen_backend": self.config.screen_backend,
+                    "hip_executable_sha256": executable_sha256,
+                    "parity_top_k": self.config.parity_top_k,
+                    "hip_timeout_seconds": self.config.hip_timeout_seconds,
+                }
+            )
+        )
+
+    def _screen_branch(
+        self,
+        index_path: Path,
+        features: tuple[FeaturePoint, ...],
+    ) -> tuple[list[TriPharmHit], dict[str, Any]]:
+        requested = self.config.screen_backend
+
+        def cpu(reason: str) -> tuple[list[TriPharmHit], dict[str, Any]]:
+            started = time.perf_counter()
+            hits = query_index(
+                index_path,
+                features,
+                top_k=self.config.screen_top_k,
+            )
+            receipt = {
+                "schema_version": "1.0",
+                "kind": "protbind.tripharm-backend-receipt",
+                "requested_backend": requested,
+                "committed_backend": "cpu-reference",
+                "fallback": requested != "cpu",
+                "fallback_reason": reason,
+                "score_semantics": (
+                    "geometric pharmacophore match; not binding affinity"
+                ),
+                "top_k": self.config.screen_top_k,
+                "cpu_reference_seconds": time.perf_counter() - started,
+                "index_sha256": sha256_file(index_path),
+                "query_features_sha256": sha256_bytes(
+                    canonical_json_bytes(
+                        [feature.to_dict() for feature in features]
+                    )
+                ),
+            }
+            return hits, receipt
+
+        if requested == "cpu":
+            return cpu("CPU_CONFIGURED")
+        executable = self.config.hip_executable
+        if executable is None or not executable.resolve().is_file():
+            if requested == "hip":
+                raise PipelineStageError(
+                    "HIP_SCREENING_UNAVAILABLE",
+                    "the configured HIP production screening executable is unavailable",
+                    recoverable=True,
+                )
+            return cpu("HIP_EXECUTABLE_UNAVAILABLE")
+        try:
+            result = query_index_hip(
+                index_path,
+                features,
+                executable=executable,
+                top_k=self.config.parity_top_k,
+                timeout_seconds=self.config.hip_timeout_seconds,
+            )
+        except TriPharmHIPError as exc:
+            if requested == "hip":
+                raise PipelineStageError(
+                    "HIP_SCREENING_FAILED",
+                    "HIP production screening failed its execution or CPU parity gate",
+                    recoverable=True,
+                ) from exc
+            hits, receipt = cpu("HIP_EXECUTION_OR_PARITY_FAILED")
+            receipt["hip_failure_type"] = type(exc).__name__
+            return hits, receipt
+        receipt = {
+            **result.receipt,
+            "kind": "protbind.tripharm-backend-receipt",
+            "requested_backend": requested,
+            "committed_backend": "hip",
+            "fallback": False,
+            "fallback_reason": None,
+        }
+        return list(result.hits[: self.config.screen_top_k]), receipt
 
     def _ensure_validation_support(
         self,
