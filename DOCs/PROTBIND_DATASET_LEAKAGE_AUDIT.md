@@ -178,11 +178,9 @@ frozen study protocol
 
 ## 8. 下一步
 
-仍需补齐：
-
-1. protein sequence identity/cluster split audit；
-2. receptor structure、pocket 与 PDB release-time leakage；
-3. label、assay protocol 与 replicate leakage；
-4. 可证明阈值召回的磁盘 fingerprint index；
-5. 针对 LIT-PCBA 等真实集合的许可审查、版本冻结和独立复核；
-6. 将通过的 audit receipt 作为未来 generalisation study protocol 的强制 support binding。
+protein sequence、pocket、PDB release-time 与 assay/label 已由
+`benchmark research-leakage-audit` 形成四个独立 receipt，见
+[`PROTBIND_CROSS_MODAL_LEAKAGE_AUDIT.md`](PROTBIND_CROSS_MODAL_LEAKAGE_AUDIT.md)。
+仍需补齐可证明阈值召回的磁盘 fingerprint index、MMseqs2/PocketMatch 独立聚类 receipt、
+RCSB metadata acquisition、真实集合许可复核，以及未来 E4 study protocol 的强制 support
+binding。

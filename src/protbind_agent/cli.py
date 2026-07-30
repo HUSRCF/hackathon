@@ -88,6 +88,11 @@ from .redock_regression import (
     build_redock_regression,
     persist_redock_regression,
 )
+from .research_leakage import (
+    ResearchLeakageConfig,
+    build_research_leakage_audit,
+    persist_research_leakage_audit,
+)
 from .structure import StructureCapabilityError
 from .study_evidence import (
     build_academic_evidence,
@@ -910,6 +915,7 @@ def _build_parser() -> argparse.ArgumentParser:
             "redock-holdout-run",
             "redock-regression",
             "dataset-audit",
+            "research-leakage-audit",
             "study-freeze",
             "study-evidence",
         ),
@@ -919,6 +925,7 @@ def _build_parser() -> argparse.ArgumentParser:
             "'redock-holdout-run' to execute/resume that exact holdout or "
             "'redock-regression' to evaluate a hash-bound pilot/frozen manifest or "
             "'dataset-audit' to check molecular split leakage or "
+            "'research-leakage-audit' for sequence/pocket/time/assay leakage or "
             "'study-freeze'/'study-evidence' for a claim-bound academic evidence packet."
         ),
     )
@@ -1143,6 +1150,31 @@ def _build_parser() -> argparse.ArgumentParser:
         help=(
             "Maximum exact Morgan comparisons per split pair. Larger pairs are sampled "
             "deterministically and remain scientifically INCOMPLETE."
+        ),
+    )
+    benchmark.add_argument(
+        "--leakage-manifest",
+        type=Path,
+        help=(
+            "Cross-modal leakage manifest for research-leakage-audit; contains split "
+            "roles and private sequence/pocket/PDB/assay declarations."
+        ),
+    )
+    benchmark.add_argument(
+        "--sequence-identity-threshold",
+        type=float,
+        default=0.3,
+        help=(
+            "Frozen global-edit identity threshold for cross-split sequence leakage."
+        ),
+    )
+    benchmark.add_argument(
+        "--max-sequence-comparisons",
+        type=int,
+        default=10_000,
+        help=(
+            "Maximum exact sequence comparisons per split pair. Larger pairs use a "
+            "deterministic sample and remain INCOMPLETE."
         ),
     )
 
@@ -1820,6 +1852,42 @@ def _run(args: argparse.Namespace) -> int:
         return 0
 
     if args.command == "benchmark":
+        if args.benchmark_command == "research-leakage-audit":
+            if args.leakage_manifest is None:
+                raise ValueError(
+                    "benchmark research-leakage-audit requires --leakage-manifest"
+                )
+            if args.output.exists() and not args.force:
+                raise FileExistsError(
+                    "research leakage output already exists; use --force only for an "
+                    "intentional regenerated receipt and preserve the prior hash"
+                )
+            result = build_research_leakage_audit(
+                args.leakage_manifest,
+                config=ResearchLeakageConfig(
+                    sequence_identity_threshold=args.sequence_identity_threshold,
+                    max_sequence_comparisons=args.max_sequence_comparisons,
+                ),
+            )
+            persist_research_leakage_audit(result, args.output)
+            print(
+                json.dumps(
+                    {
+                        "schema_version": result["schema_version"],
+                        "kind": result["kind"],
+                        "dataset": result["dataset"],
+                        "component_statuses": result["gate"]["component_statuses"],
+                        "broad_cross_modal_novelty_precondition": result["gate"][
+                            "broad_cross_modal_novelty_precondition"
+                        ],
+                        "bundle_sha256": result["bundle_sha256"],
+                        "output_file_sha256": sha256_file(args.output),
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+            )
+            return 0
         if args.benchmark_command == "dataset-audit":
             required_metadata = {
                 "--dataset-name": args.dataset_name,

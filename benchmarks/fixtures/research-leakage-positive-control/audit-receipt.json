@@ -1,0 +1,241 @@
+{
+  "bundle_sha256": "0d3b9fbc59a87d5c6c79e29bb41c84ec8eaac674a6ec9d48364890d5844f1597",
+  "config": {
+    "sequence_identity": {
+      "definition": "1 - Levenshtein_edit_distance / max(sequence lengths)",
+      "large_pair_policy": "deterministic SHA-256 sampling; a partial audit can detect leakage but cannot establish its absence",
+      "max_comparisons_per_split_pair": 10000,
+      "sampling_namespace": "protbind-sequence-leakage-v1",
+      "threshold": 0.3
+    }
+  },
+  "dataset": {
+    "license": "CC0-1.0",
+    "name": "ProtBind synthetic cross-modal leakage positive control",
+    "source": "synthetic:protbind-research-leakage-positive-control",
+    "version": "1"
+  },
+  "gate": {
+    "broad_cross_modal_novelty_precondition": {
+      "semantics": "PASS is only a strict cross-modal data-integrity precondition. It does not demonstrate model performance or biological validity.",
+      "status": "FAIL"
+    },
+    "component_statuses": {
+      "assay_label": "FAIL",
+      "pdb_temporal": "FAIL",
+      "pocket_cluster": "FAIL",
+      "sequence_cluster": "FAIL"
+    }
+  },
+  "implementation": {
+    "module": "protbind_agent.research_leakage",
+    "sequence_identity_backend": {
+      "name": "biopython.PairwiseAligner",
+      "version": "1.85"
+    },
+    "source_sha256": "87a41c3d0b4982b513adf2e5cdbf40d7819d402cfdaf02bc16e560428e085ad7"
+  },
+  "input_binding": {
+    "file_sha256": "98a4194e5f31af117cd8f6b7b21c3ce8c1adcb6d650344b1fc5a1e55b12113f1",
+    "filename": "manifest.json"
+  },
+  "kind": "PROTBIND_RESEARCH_LEAKAGE_AUDIT",
+  "privacy": {
+    "examples": "SHA-256 commitments only",
+    "raw_assay_or_entity_ids_in_receipt": false,
+    "raw_labels_in_receipt": false,
+    "raw_record_ids_in_receipt": false,
+    "raw_sequences_in_receipt": false
+  },
+  "receipts": {
+    "assay_label": {
+      "assay_label_precondition": {
+        "semantics": "The strict broad-novelty gate requires assay IDs, replicate groups, and target-compound entity pairs to be disjoint across splits and entity pairs to be unique within each split. This may be stricter than a target-specific random split and must match the intended claim.",
+        "status": "FAIL"
+      },
+      "kind": "PROTBIND_ASSAY_LABEL_LEAKAGE_RECEIPT",
+      "pairwise": [
+        {
+          "assay_id_overlap_count": 1,
+          "assay_id_overlap_examples": [
+            "sha256:3c31c28d1f5e0904aec516f806975ba8516604002cee77087f6d5ea316f40d6b"
+          ],
+          "conflicting_label_pair_count": 1,
+          "conflicting_label_pair_examples": [
+            "sha256:7fe16a215ef2896838b4e558529520c53781f5937f5a1680732be79ffa21ef18"
+          ],
+          "left_split": "test",
+          "replicate_group_overlap_count": 1,
+          "replicate_group_overlap_examples": [
+            "sha256:cea1de0c0beb830bf7cb7ea8e72b72733ccec87b6edbd3f1a2a11e167bf3d16a"
+          ],
+          "right_split": "train",
+          "target_compound_pair_overlap_count": 1,
+          "target_compound_pair_overlap_examples": [
+            "sha256:7fe16a215ef2896838b4e558529520c53781f5937f5a1680732be79ffa21ef18"
+          ]
+        }
+      ],
+      "provenance_artifact_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "receipt_sha256": "b804de7f2c55c1e09fdd44fb8e17a6bbd75615e7b678ebe554f6ca93d68f539b",
+      "schema_version": "1.0",
+      "within_split": {
+        "test": {
+          "duplicate_target_compound_pair_record_count": 0,
+          "record_count": 2,
+          "unique_target_compound_pair_count": 2
+        },
+        "train": {
+          "duplicate_target_compound_pair_record_count": 0,
+          "record_count": 2,
+          "unique_target_compound_pair_count": 2
+        }
+      }
+    },
+    "pdb_temporal": {
+      "kind": "PROTBIND_PDB_RELEASE_TIME_LEAKAGE_RECEIPT",
+      "pairwise": [
+        {
+          "left_split": "test",
+          "pdb_id_overlap_count": 1,
+          "pdb_id_overlap_examples": [
+            "sha256:5c8e8fda4263db046de4d8cfcae1e4aa04196b74ef2a35c5f1b7680146968326"
+          ],
+          "right_split": "train"
+        }
+      ],
+      "pdb_temporal_precondition": {
+        "semantics": "TRAIN records must be released on/before the cutoff and EVALUATION records strictly after it, with no exact PDB ID shared across splits. Dates are hash-bound declarations and are not re-fetched from RCSB.",
+        "status": "FAIL"
+      },
+      "provenance_artifact_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "rcsb_metadata_verification": "NOT_EVALUATED",
+      "receipt_sha256": "c3a7c174e75ea8451fe6893d44b4b5f6af1429edabf8bfc66f0603b61291e855",
+      "schema_version": "1.0",
+      "split_release_date_ranges": {
+        "test": {
+          "maximum": "2023-01-01",
+          "minimum": "2020-01-01"
+        },
+        "train": {
+          "maximum": "2022-01-01",
+          "minimum": "2020-01-01"
+        }
+      },
+      "temporal_violation_count": 1,
+      "temporal_violations": [
+        {
+          "expected": "> 2022-12-31",
+          "pdb": "sha256:5c8e8fda4263db046de4d8cfcae1e4aa04196b74ef2a35c5f1b7680146968326",
+          "record": "sha256:ed1e1dcf971990c1b89676ae785436106f7548b1ae41d174ca9d3bfb9661a477",
+          "release_date": "2020-01-01",
+          "role": "EVALUATION",
+          "split": "test"
+        }
+      ],
+      "training_cutoff_date": "2022-12-31"
+    },
+    "pocket_cluster": {
+      "cluster_method_verification": "NOT_EVALUATED",
+      "cluster_protocol": {
+        "assignment_artifact_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "method": "synthetic declared pocket clusters",
+        "threshold_semantics": "identical fixture cluster IDs",
+        "version": "1"
+      },
+      "kind": "PROTBIND_POCKET_CLUSTER_LEAKAGE_RECEIPT",
+      "pairwise": [
+        {
+          "declared_pocket_cluster_overlap_count": 1,
+          "declared_pocket_cluster_overlap_examples": [
+            "sha256:314312ff65f32632a6989e30a0c388ac9aaa0c7f2e3b083fc6f3b9352375a347"
+          ],
+          "left_split": "test",
+          "pocket_artifact_overlap_count": 1,
+          "pocket_artifact_overlap_examples": [
+            "sha256:3138bb9bc78df27c473ecfd1410f7bd45ebac1f59cf3ff9cfe4db77aab7aedd3"
+          ],
+          "right_split": "train"
+        }
+      ],
+      "pocket_cluster_precondition": {
+        "semantics": "Artifact overlap is verified by SHA-256. Cluster overlap is audited from hash-bound external assignments; this receipt does not recompute or validate the declared pocket clustering method.",
+        "status": "FAIL"
+      },
+      "provenance_artifact_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "receipt_sha256": "0460c5741cd843f8736ea32fb337e026117d8f7a0988ff12c0edcdb42dc94d6b",
+      "schema_version": "1.0"
+    },
+    "sequence_cluster": {
+      "cluster_method_verification": "NOT_EVALUATED",
+      "cluster_protocol": {
+        "assignment_artifact_sha256": "9999999999999999999999999999999999999999999999999999999999999999",
+        "method": "synthetic declared sequence clusters",
+        "threshold_semantics": "identical fixture cluster IDs",
+        "version": "1"
+      },
+      "identity_definition": "1 - Levenshtein_edit_distance / max(sequence lengths)",
+      "kind": "PROTBIND_SEQUENCE_CLUSTER_LEAKAGE_RECEIPT",
+      "pairwise": [
+        {
+          "at_or_above_threshold_pair_count": 1,
+          "declared_sequence_cluster_overlap_count": 1,
+          "declared_sequence_cluster_overlap_examples": [
+            "sha256:519beb3f358c80d4502c6a06fbcd9d9dc05762a572f1fe9f50c30d4183928b56"
+          ],
+          "exact_sequence_overlap_count": 1,
+          "exact_sequence_overlap_examples": [
+            "sha256:c729ebc224388368ab8c8df88487ef137ad8bd5097651cf67c37bda5622c9f9a"
+          ],
+          "executed_comparison_count": 4,
+          "full_comparison_count": 4,
+          "leakage_examples": [
+            {
+              "global_edit_identity": 1.0,
+              "left_sequence": "sha256:c729ebc224388368ab8c8df88487ef137ad8bd5097651cf67c37bda5622c9f9a",
+              "right_sequence": "sha256:c729ebc224388368ab8c8df88487ef137ad8bd5097651cf67c37bda5622c9f9a"
+            }
+          ],
+          "left_split": "test",
+          "maximum_global_edit_identity": 1.0,
+          "right_split": "train",
+          "status": "FULL",
+          "threshold": 0.3
+        }
+      ],
+      "provenance_artifact_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "receipt_sha256": "8f4fe622599b84122eb31ffc64c7b6e10f0f3e8c9576c612462e6e7622eeb2ec",
+      "schema_version": "1.0",
+      "sequence_cluster_precondition": {
+        "semantics": "PASS means no cross-split edge met the frozen global-edit identity threshold in a FULL comparison, no exact sequence was shared, and no declared sequence cluster crossed splits. It does not establish model generalisation.",
+        "status": "FAIL"
+      },
+      "split_unique_sequence_counts": {
+        "test": 2,
+        "train": 2
+      }
+    }
+  },
+  "schema_version": "1.0",
+  "scientific_boundaries": [
+    "Global edit identity is deterministic but is not MMseqs local sequence identity; claims must name the metric actually used.",
+    "Partial sequence comparisons can detect leakage but cannot establish its absence.",
+    "Pocket cluster assignments and PDB release dates are hash-bound declarations; their upstream computation or RCSB correctness is not independently verified.",
+    "The assay gate is intentionally strict for broad novelty and may not match a target-specific random-split estimand.",
+    "A PASS receipt does not establish docking accuracy, enrichment, affinity, activity, or external generalisation."
+  ],
+  "split_summary": {
+    "test": {
+      "record_count": 2,
+      "role": "EVALUATION",
+      "unique_pdb_count": 2,
+      "unique_sequence_count": 2
+    },
+    "train": {
+      "record_count": 2,
+      "role": "TRAIN",
+      "unique_pdb_count": 2,
+      "unique_sequence_count": 2
+    }
+  }
+}

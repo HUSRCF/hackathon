@@ -505,6 +505,11 @@ McNemar `p=1.0`，所以“v2 统计优于 v1”明确为 `INCONCLUSIVE`，不�
 within-split duplicate 和 scaffold overlap；Morgan 相似性超出预算时只给出确定性抽样风险提示，
 并阻止 broad-generalisation precondition 通过。命令与 positive control 见
 [`DOCs/PROTBIND_DATASET_LEAKAGE_AUDIT.md`](DOCs/PROTBIND_DATASET_LEAKAGE_AUDIT.md)。
+进一步的 `benchmark research-leakage-audit` 会分别生成 protein sequence、pocket、
+PDB release-time 与 assay/label receipt；原始序列、标签和实体 ID 不进入输出。外部声明的
+pocket cluster 与本地提供的 PDB 日期只做 hash-bound 审计，不伪称已复核其上游算法或 RCSB
+真实性。详见
+[`DOCs/PROTBIND_CROSS_MODAL_LEAKAGE_AUDIT.md`](DOCs/PROTBIND_CROSS_MODAL_LEAKAGE_AUDIT.md)。
 完整哈希、逐例指标和适用边界见
 [`refine-logs/EXPERIMENT_RESULTS.md`](refine-logs/EXPERIMENT_RESULTS.md)。Vina score 只作为工具分数，
 不得解释为实验结合自由能。

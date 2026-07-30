@@ -1,0 +1,94 @@
+{
+  "schema_version": "1.0",
+  "dataset": {
+    "name": "ProtBind synthetic cross-modal leakage positive control",
+    "version": "1",
+    "license": "CC0-1.0",
+    "source": "synthetic:protbind-research-leakage-positive-control"
+  },
+  "split_roles": {
+    "train": "TRAIN",
+    "test": "EVALUATION"
+  },
+  "pdb_training_cutoff_date": "2022-12-31",
+  "sequence_cluster_protocol": {
+    "method": "synthetic declared sequence clusters",
+    "version": "1",
+    "threshold_semantics": "identical fixture cluster IDs",
+    "assignment_artifact_sha256": "9999999999999999999999999999999999999999999999999999999999999999"
+  },
+  "pocket_cluster_protocol": {
+    "method": "synthetic declared pocket clusters",
+    "version": "1",
+    "threshold_semantics": "identical fixture cluster IDs",
+    "assignment_artifact_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "provenance": {
+    "sequence_source_artifact_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "pocket_source_artifact_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "pdb_metadata_artifact_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "assay_metadata_artifact_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+  },
+  "records": [
+    {
+      "record_id": "train-1",
+      "split": "train",
+      "protein_sequence": "ACDEFGHIK",
+      "sequence_cluster_id": "sequence-cluster-1",
+      "pocket_artifact_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+      "pocket_cluster_id": "pocket-cluster-1",
+      "pdb_id": "1AAA",
+      "pdb_release_date": "2020-01-01",
+      "assay_id": "assay-1",
+      "replicate_group_id": "replicate-1",
+      "target_identity": "target-1",
+      "compound_parent_identity": "compound-1",
+      "label": 1
+    },
+    {
+      "record_id": "train-2",
+      "split": "train",
+      "protein_sequence": "MNPQRSTVW",
+      "sequence_cluster_id": "sequence-cluster-2",
+      "pocket_artifact_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+      "pocket_cluster_id": "pocket-cluster-2",
+      "pdb_id": "2BBB",
+      "pdb_release_date": "2022-01-01",
+      "assay_id": "assay-2",
+      "replicate_group_id": "replicate-2",
+      "target_identity": "target-2",
+      "compound_parent_identity": "compound-2",
+      "label": 0
+    },
+    {
+      "record_id": "test-1",
+      "split": "test",
+      "protein_sequence": "ACDEFGHIK",
+      "sequence_cluster_id": "sequence-cluster-1",
+      "pocket_artifact_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+      "pocket_cluster_id": "pocket-cluster-1",
+      "pdb_id": "1AAA",
+      "pdb_release_date": "2020-01-01",
+      "assay_id": "assay-1",
+      "replicate_group_id": "replicate-1",
+      "target_identity": "target-1",
+      "compound_parent_identity": "compound-1",
+      "label": 0
+    },
+    {
+      "record_id": "test-2",
+      "split": "test",
+      "protein_sequence": "YYYYYYYYY",
+      "sequence_cluster_id": "sequence-cluster-3",
+      "pocket_artifact_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+      "pocket_cluster_id": "pocket-cluster-3",
+      "pdb_id": "3CCC",
+      "pdb_release_date": "2023-01-01",
+      "assay_id": "assay-3",
+      "replicate_group_id": "replicate-3",
+      "target_identity": "target-3",
+      "compound_parent_identity": "compound-3",
+      "label": 1
+    }
+  ]
+}

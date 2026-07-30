@@ -184,7 +184,10 @@ ProtBind 后续不应以“功能数量”衡量科研成熟度，而应沿下�
 比较预算时只做确定性抽样，并把 absence-of-leakage 结论标记为 `INCOMPLETE`。完整命令、
 规模语义与 positive control 见
 [`PROTBIND_DATASET_LEAKAGE_AUDIT.md`](PROTBIND_DATASET_LEAKAGE_AUDIT.md)。
-蛋白 sequence/pocket、时间、assay 与 label leakage 仍需独立 receipt，不能由分子审计代替。
+蛋白 sequence/pocket、PDB 时间、assay 与 label leakage 现已由
+`benchmark research-leakage-audit` 输出四个独立 receipt；其 global-edit sequence metric、
+外部声明 pocket cluster 和未联网复核的 PDB 日期均保留明确限制。详见
+[`PROTBIND_CROSS_MODAL_LEAKAGE_AUDIT.md`](PROTBIND_CROSS_MODAL_LEAKAGE_AUDIT.md)。
 下载时间和最终 URL 应来自另一个经过授权的 acquisition receipt；本地 leakage audit 不伪造
 它未观察到的网络时间。
 
