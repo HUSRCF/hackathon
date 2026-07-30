@@ -5,6 +5,7 @@ import json
 import pytest
 
 from protbind_agent.agent_runtime import (
+    ProtBindAgentPendingResult,
     ProtBindAgentRuntime,
     require_loopback_hipfire_url,
 )
@@ -281,3 +282,172 @@ def test_formal_workload_routes_three_tools_and_keeps_cited_compact_results(
     assert status_message["value"]["gate_receipt"]["artifact_id"] == (
         f"sha256:{gate_digest}"
     )
+
+
+def test_runtime_returns_waiting_approval_then_resumes_without_an_extra_model_call(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    service = ProtBindMCPService(
+        workspace=tmp_path / "workspace",
+        project_root=tmp_path,
+    )
+    monkeypatch.setattr(
+        service,
+        "case_create",
+        lambda **_arguments: {"run_id": "run-1", "state": "CREATED"},
+    )
+    backend = MockBackend(
+        [
+            ChatResponse(
+                content="",
+                tool_calls=(
+                    ToolCall(
+                        id="create-1",
+                        name="case_create",
+                        arguments={
+                            "case_path": "case.json",
+                            "index_path": "index.sqlite",
+                        },
+                    ),
+                ),
+            ),
+            ChatResponse(content="案例已创建。"),
+        ]
+    )
+    runtime = ProtBindAgentRuntime(service, backend, model="fixture")
+
+    pending = runtime.start("创建案例")
+
+    assert isinstance(pending, ProtBindAgentPendingResult)
+    assert pending.status == "WAITING_APPROVAL"
+    assert pending.approval["shadow_plan"]["status"] == "WAITING_APPROVAL"
+    assert len(backend.requests) == 1
+    assert pending.tool_timeline[-1]["status"] == "WAITING_APPROVAL"
+
+    result = runtime.resume(
+        pending.session_id,
+        pending.approval_id,
+        approved=True,
+    )
+
+    assert not isinstance(result, ProtBindAgentPendingResult)
+    assert result.answer == "案例已创建。"
+    assert len(backend.requests) == 2
+    assert [event["status"] for event in result.tool_timeline] == [
+        "WAITING_APPROVAL",
+        "EXECUTED",
+    ]
+    assert result.approvals[-1]["status"] == "EXECUTED"
+    assert len(result.shadow_plans) == 1
+
+
+def test_runtime_decline_resumes_with_a_real_permission_error(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    service = ProtBindMCPService(
+        workspace=tmp_path / "workspace",
+        project_root=tmp_path,
+    )
+    called = False
+
+    def create(**_arguments):
+        nonlocal called
+        called = True
+
+    monkeypatch.setattr(service, "case_create", create)
+    backend = MockBackend(
+        [
+            ChatResponse(
+                content="",
+                tool_calls=(
+                    ToolCall(
+                        id="create-1",
+                        name="case_create",
+                        arguments={
+                            "case_path": "case.json",
+                            "index_path": "index.sqlite",
+                        },
+                    ),
+                ),
+            ),
+            ChatResponse(content="用户拒绝，未创建案例。"),
+        ]
+    )
+    runtime = ProtBindAgentRuntime(service, backend, model="fixture")
+    pending = runtime.start("创建案例")
+    assert isinstance(pending, ProtBindAgentPendingResult)
+
+    result = runtime.resume(
+        pending.session_id,
+        pending.approval_id,
+        approved=False,
+    )
+
+    assert not isinstance(result, ProtBindAgentPendingResult)
+    assert called is False
+    assert result.approvals[-1]["status"] == "DECLINED"
+    tool_message = json.loads(backend.requests[1].messages[-1].content or "{}")
+    assert tool_message["ok"] is False
+    assert "declined" in tool_message["error"]
+
+
+def test_parallel_permissioned_calls_pause_once_per_fresh_approval(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    service = ProtBindMCPService(
+        workspace=tmp_path / "workspace",
+        project_root=tmp_path,
+    )
+    created: list[str] = []
+
+    def create(case_path: str, **_arguments):
+        created.append(case_path)
+        return {"case_path": case_path}
+
+    monkeypatch.setattr(service, "case_create", create)
+    backend = MockBackend(
+        [
+            ChatResponse(
+                content="",
+                tool_calls=(
+                    ToolCall(
+                        id="create-1",
+                        name="case_create",
+                        arguments={
+                            "case_path": "one.json",
+                            "index_path": "index.sqlite",
+                        },
+                    ),
+                    ToolCall(
+                        id="create-2",
+                        name="case_create",
+                        arguments={
+                            "case_path": "two.json",
+                            "index_path": "index.sqlite",
+                        },
+                    ),
+                ),
+            ),
+            ChatResponse(content="两个已批准调用均完成。"),
+        ]
+    )
+    runtime = ProtBindAgentRuntime(service, backend, model="fixture")
+    first = runtime.start("依次调用两次 case_create")
+    assert isinstance(first, ProtBindAgentPendingResult)
+
+    second = runtime.resume(first.session_id, first.approval_id, approved=True)
+
+    assert isinstance(second, ProtBindAgentPendingResult)
+    assert second.approval_id != first.approval_id
+    assert created == ["one.json"]
+    assert len(backend.requests) == 1
+
+    final = runtime.resume(second.session_id, second.approval_id, approved=True)
+
+    assert not isinstance(final, ProtBindAgentPendingResult)
+    assert created == ["one.json", "two.json"]
+    assert [request["status"] for request in final.approvals] == [
+        "EXECUTED",
+        "EXECUTED",
+    ]
+    assert len(final.shadow_plans) == 2

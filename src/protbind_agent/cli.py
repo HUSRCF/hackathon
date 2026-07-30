@@ -1137,7 +1137,7 @@ def _run(args: argparse.Namespace) -> int:
                 prompt = sys.stdin.readline()
         if not prompt or not prompt.strip():
             raise ValueError("Agent prompt cannot be empty")
-        result = create_runtime(
+        runtime = create_runtime(
             workspace=args.workspace,
             project_root=args.project_root,
             model=args.model,
@@ -1147,15 +1147,19 @@ def _run(args: argparse.Namespace) -> int:
             pipeline_config=_worker_config(args.worker_config),
             max_steps=args.max_steps,
             route_tools=args.tool_routing,
-        ).run(prompt)
+        )
+        result = runtime.run_interactive(prompt)
         if args.json:
             print(json.dumps(asdict(result), ensure_ascii=False, indent=2))
         else:
             print(result.answer)
-            if result.tool_timeline:
+            if result.tool_timeline or result.approvals:
                 print(
                     json.dumps(
-                        {"tool_timeline": result.tool_timeline},
+                        {
+                            "tool_timeline": result.tool_timeline,
+                            "approval_timeline": result.approvals,
+                        },
                         ensure_ascii=False,
                         indent=2,
                     ),

@@ -27,6 +27,14 @@ class ToolPermissionError(ToolError):
     pass
 
 
+class ToolPendingError(ToolError):
+    """Control-flow signal for a tool invocation awaiting host approval."""
+
+    def __init__(self, pending: dict[str, Any]) -> None:
+        super().__init__("tool invocation is waiting for approval")
+        self.pending = pending
+
+
 @dataclass(frozen=True, slots=True)
 class ToolSpec:
     name: str
@@ -55,8 +63,11 @@ class ToolResult:
     error: str | None = None
     message_value: Any = field(default=None)
     has_message_value: bool = False
+    pending: dict[str, Any] | None = None
 
     def as_message_content(self) -> str:
+        if self.pending is not None:
+            raise RuntimeError("pending tool results are not model-visible tool messages")
         value = self.message_value if self.has_message_value else self.value
         return json.dumps(
             {"ok": self.ok, "value": value, "error": self.error},
@@ -175,6 +186,8 @@ class ToolRegistry:
                 message_value=message_value,
                 has_message_value=True,
             )
+        except ToolPendingError as exc:
+            return ToolResult(name=name, ok=False, pending=exc.pending)
         except (ToolError, ValueError, TypeError) as exc:
             return ToolResult(name=name, ok=False, error=str(exc))
         except Exception as exc:  # tool boundary: never crash the Agent loop

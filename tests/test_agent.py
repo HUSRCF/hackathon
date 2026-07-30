@@ -4,10 +4,10 @@ import json
 
 import pytest
 
-from radeon_agent.agent import Agent, AgentLimitError
+from radeon_agent.agent import Agent, AgentLimitError, AgentPendingResult
 from radeon_agent.backends import MockBackend
 from radeon_agent.models import ChatResponse, ToolCall, Usage
-from radeon_agent.tools import SideEffect, ToolRegistry, ToolSpec
+from radeon_agent.tools import SideEffect, ToolPendingError, ToolRegistry, ToolSpec
 
 
 def _add_tool() -> ToolSpec:
@@ -184,3 +184,139 @@ def test_tool_result_view_failure_does_not_relabel_completed_side_effect() -> No
 
     assert result.ok is True
     assert json.loads(result.as_message_content())["value"] == {"written": True}
+
+
+def test_agent_pauses_without_sending_a_false_tool_failure_then_resumes() -> None:
+    approved = False
+
+    def approval_tool(_arguments: dict) -> str:
+        if not approved:
+            raise ToolPendingError(
+                {
+                    "approval_id": "approval-1",
+                    "status": "WAITING_APPROVAL",
+                }
+            )
+        return "executed"
+
+    tool = ToolSpec(
+        name="permissioned",
+        description="A permissioned fixture.",
+        parameters={"type": "object", "properties": {}},
+        handler=approval_tool,
+    )
+    backend = MockBackend(
+        [
+            ChatResponse(
+                content="",
+                tool_calls=(
+                    ToolCall(id="permissioned-1", name="permissioned", arguments={}),
+                ),
+            ),
+            ChatResponse(content="completed"),
+        ]
+    )
+    agent = Agent(backend, model="test", tools=ToolRegistry([tool]))
+
+    pending = agent.start("run the permissioned tool")
+
+    assert isinstance(pending, AgentPendingResult)
+    assert pending.status == "WAITING_APPROVAL"
+    assert pending.tool_calls == 1
+    assert len(backend.requests) == 1
+    assert not any(message.role == "tool" for message in pending.messages)
+
+    approved = True
+    result = agent.resume(
+        pending.session_id,
+        approval_id=pending.pending_tool.approval_id,
+    )
+
+    assert not isinstance(result, AgentPendingResult)
+    assert result.answer == "completed"
+    assert result.tool_calls == 1
+    assert len(backend.requests) == 2
+    tool_message = backend.requests[1].messages[-1]
+    assert json.loads(tool_message.content or "{}")["value"] == "executed"
+
+
+def test_agent_rejects_wrong_resume_id_without_losing_paused_session() -> None:
+    tool = ToolSpec(
+        name="permissioned",
+        description="A permissioned fixture.",
+        parameters={"type": "object", "properties": {}},
+        handler=lambda _arguments: (_ for _ in ()).throw(
+            ToolPendingError({"approval_id": "approval-1"})
+        ),
+    )
+    backend = MockBackend(
+        [
+            ChatResponse(
+                content="",
+                tool_calls=(
+                    ToolCall(id="permissioned-1", name="permissioned", arguments={}),
+                ),
+            )
+        ]
+    )
+    agent = Agent(backend, model="test", tools=ToolRegistry([tool]))
+    pending = agent.start("pause")
+    assert isinstance(pending, AgentPendingResult)
+
+    with pytest.raises(ValueError, match="does not match"):
+        agent.resume(pending.session_id, approval_id="wrong")
+
+    assert agent.pending_session_ids() == (pending.session_id,)
+
+
+def test_approval_wait_does_not_consume_active_compute_timeout(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    approved = False
+    clock = [10.0]
+    monkeypatch.setattr("radeon_agent.agent.time.monotonic", lambda: clock[0])
+
+    def approval_tool(_arguments: dict) -> str:
+        if not approved:
+            raise ToolPendingError({"approval_id": "approval-1"})
+        return "executed"
+
+    backend = MockBackend(
+        [
+            ChatResponse(
+                content="",
+                tool_calls=(
+                    ToolCall(id="permissioned-1", name="permissioned", arguments={}),
+                ),
+            ),
+            ChatResponse(content="completed"),
+        ]
+    )
+    agent = Agent(
+        backend,
+        model="test",
+        tools=ToolRegistry(
+            [
+                ToolSpec(
+                    name="permissioned",
+                    description="A permissioned fixture.",
+                    parameters={"type": "object", "properties": {}},
+                    handler=approval_tool,
+                )
+            ]
+        ),
+        timeout_seconds=1.0,
+    )
+    pending = agent.start("pause")
+    assert isinstance(pending, AgentPendingResult)
+
+    clock[0] += 3600.0
+    approved = True
+    result = agent.resume(
+        pending.session_id,
+        approval_id=pending.pending_tool.approval_id,
+    )
+
+    assert not isinstance(result, AgentPendingResult)
+    assert result.answer == "completed"
+    assert result.elapsed_seconds == 0.0

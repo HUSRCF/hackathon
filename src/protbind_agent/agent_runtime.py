@@ -10,14 +10,14 @@ from pathlib import Path
 from typing import Any, TextIO
 from urllib.parse import urlsplit
 
-from radeon_agent.agent import Agent, AgentResult
+from radeon_agent.agent import Agent, AgentPendingResult, AgentResult
 from radeon_agent.backends import HipFireBackend
 from radeon_agent.backends.base import LLMBackend
 
 from .agent_routing import ProtBindToolRouter
-from .agent_tools import ActionPreview, ConfirmationCallback, ProtBindAgentTools
+from .agent_tools import ConfirmationCallback, ProtBindAgentTools
+from .approval_runtime import ApprovalCoordinator
 from .mcp_server import ProtBindMCPService
-from .plan_ahead import build_shadow_plan
 from .workflow import PipelineConfig
 
 PROTBIND_AGENT_SYSTEM_PROMPT = """You are the local private ProtBind research Agent.
@@ -67,37 +67,23 @@ class ProtBindAgentResult:
     exposed_tool_schema_bytes: tuple[int, ...]
     tool_routes: tuple[dict[str, object], ...]
     shadow_plans: tuple[dict[str, Any], ...]
+    approvals: tuple[dict[str, Any], ...] = ()
 
 
-class TerminalConfirmation:
-    """Fresh, human-visible confirmation for every permissioned tool invocation."""
+@dataclass(frozen=True, slots=True)
+class ProtBindAgentPendingResult:
+    status: str
+    session_id: str
+    approval_id: str
+    approval: dict[str, Any]
+    model_calls: int
+    tool_calls: int
+    active_elapsed_seconds: float
+    tool_timeline: tuple[dict[str, Any], ...]
+    shadow_plans: tuple[dict[str, Any], ...]
 
-    def __init__(
-        self,
-        *,
-        input_stream: TextIO = sys.stdin,
-        output_stream: TextIO = sys.stderr,
-    ) -> None:
-        self.input_stream = input_stream
-        self.output_stream = output_stream
 
-    def __call__(self, preview: ActionPreview) -> bool:
-        shadow_plan = build_shadow_plan(preview)
-        self.output_stream.write(
-            "\nProtBind confirmation required:\n"
-            + json.dumps(
-                {
-                    "action": asdict(preview),
-                    "shadow_plan": shadow_plan.to_dict(),
-                },
-                ensure_ascii=False,
-                indent=2,
-            )
-            + "\nApprove this one tool call? [y/N] "
-        )
-        self.output_stream.flush()
-        answer = self.input_stream.readline()
-        return answer.strip().lower() in {"y", "yes"}
+AgentRuntimeResult = ProtBindAgentResult | ProtBindAgentPendingResult
 
 
 class ProtBindAgentRuntime:
@@ -107,14 +93,18 @@ class ProtBindAgentRuntime:
         backend: LLMBackend,
         *,
         model: str,
-        confirmation: ConfirmationCallback,
+        confirmation: ConfirmationCallback | None = None,
         max_steps: int = 16,
         timeout_seconds: float = 1800.0,
         max_tokens: int = 4096,
         stream: bool = True,
         route_tools: bool = True,
     ) -> None:
-        self.tools = ProtBindAgentTools(service, confirmation=confirmation)
+        self.approvals = ApprovalCoordinator() if confirmation is None else None
+        approval_callback = confirmation or self.approvals
+        if approval_callback is None:  # narrowed for static type checkers
+            raise RuntimeError("approval callback could not be initialized")
+        self.tools = ProtBindAgentTools(service, confirmation=approval_callback)
         self.tool_router = ProtBindToolRouter()
         self.agent = Agent(
             backend,
@@ -132,7 +122,61 @@ class ProtBindAgentRuntime:
         )
 
     def run(self, prompt: str) -> ProtBindAgentResult:
+        """Compatibility path for pre-approved tests and controlled benchmarks."""
+
         result: AgentResult = self.agent.run(prompt)
+        return self._final_result(result)
+
+    def start(self, prompt: str) -> AgentRuntimeResult:
+        result = self.agent.start(prompt)
+        if isinstance(result, AgentPendingResult):
+            return self._pending_result(result)
+        return self._final_result(result)
+
+    def resume(
+        self,
+        session_id: str,
+        approval_id: str,
+        *,
+        approved: bool,
+    ) -> AgentRuntimeResult:
+        if self.approvals is None:
+            raise RuntimeError(
+                "this runtime uses a synchronous confirmation callback and cannot resume"
+            )
+        if self.agent.pending_approval_id(session_id) != approval_id:
+            raise ValueError("approval_id does not match the paused agent session")
+        with self.approvals.resume_scope(approval_id, approved=approved):
+            result = self.agent.resume(
+                session_id,
+                approval_id=approval_id,
+            )
+        if isinstance(result, AgentPendingResult):
+            return self._pending_result(result)
+        return self._final_result(result)
+
+    def approval_status(self, approval_id: str) -> dict[str, Any]:
+        if self.approvals is None:
+            raise RuntimeError("this runtime has no non-blocking approval coordinator")
+        return self.approvals.get(approval_id)
+
+    def _pending_result(
+        self,
+        result: AgentPendingResult,
+    ) -> ProtBindAgentPendingResult:
+        return ProtBindAgentPendingResult(
+            status=result.status,
+            session_id=result.session_id,
+            approval_id=result.pending_tool.approval_id,
+            approval=dict(result.pending_tool.payload),
+            model_calls=result.model_calls,
+            tool_calls=result.tool_calls,
+            active_elapsed_seconds=result.active_elapsed_seconds,
+            tool_timeline=tuple(self.tools.audit_dicts()),
+            shadow_plans=tuple(self.tools.shadow_plan_dicts()),
+        )
+
+    def _final_result(self, result: AgentResult) -> ProtBindAgentResult:
         tool_citations = sorted(
             {
                 citation
@@ -180,7 +224,33 @@ class ProtBindAgentRuntime:
             exposed_tool_schema_bytes=result.exposed_tool_schema_bytes,
             tool_routes=tuple(self.tool_router.decision_dicts()),
             shadow_plans=tuple(self.tools.shadow_plan_dicts()),
+            approvals=(
+                self.approvals.requests() if self.approvals is not None else ()
+            ),
         )
+
+    def run_interactive(
+        self,
+        prompt: str,
+        *,
+        input_stream: TextIO = sys.stdin,
+        output_stream: TextIO = sys.stderr,
+    ) -> ProtBindAgentResult:
+        result = self.start(prompt)
+        while isinstance(result, ProtBindAgentPendingResult):
+            output_stream.write(
+                "\nProtBind approval is waiting; deterministic idle work is cancellable:\n"
+                + json.dumps(result.approval, ensure_ascii=False, indent=2)
+                + "\nApprove this one tool call? [y/N] "
+            )
+            output_stream.flush()
+            answer = input_stream.readline()
+            result = self.resume(
+                result.session_id,
+                result.approval_id,
+                approved=answer.strip().lower() in {"y", "yes"},
+            )
+        return result
 
 
 def create_runtime(
@@ -210,7 +280,7 @@ def create_runtime(
         service,
         backend or HipFireBackend(base_url),
         model=model,
-        confirmation=confirmation or TerminalConfirmation(),
+        confirmation=confirmation,
         max_steps=max_steps,
         stream=stream,
         route_tools=route_tools,

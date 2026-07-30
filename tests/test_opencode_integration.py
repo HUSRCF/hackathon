@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -49,6 +50,98 @@ def test_opencode_configuration_is_local_and_default_deny() -> None:
         assert config["permission"][name] == "ask"
     assert config["permission"]["protbind_knowledge_model_status"] == "allow"
     assert config["permission"]["skill"]["protbind-library"] == "allow"
+
+
+def test_opencode_shadowplan_plugin_is_redacted_and_event_complete() -> None:
+    plugin = REPOSITORY_ROOT / ".opencode/plugins/protbind-shadowplan.ts"
+    text = plugin.read_text(encoding="utf-8")
+
+    for hook in (
+        '"permission.ask"',
+        '"permission.updated"',
+        '"permission.replied"',
+        '"tool.execute.before"',
+        '"tool.execute.after"',
+        '"session.status"',
+        '"session.idle"',
+    ):
+        assert hook in text
+    assert "protbind_case_advance" in text
+    assert "continuation-token-use" in text
+    assert "Bun.$" not in text
+
+    script = """
+import {
+  buildOpenCodeShadowPlan,
+  ProtBindShadowPlan
+} from "./.opencode/plugins/protbind-shadowplan.ts";
+const plan = await buildOpenCodeShadowPlan(
+  "protbind_case_advance",
+  {run_id: "run-1", continuation_token: "private-token"}
+);
+const toasts = [];
+const logs = [];
+const hooks = await ProtBindShadowPlan({
+  client: {
+    tui: {showToast: async (value) => {toasts.push(value)}},
+    app: {log: async (value) => {logs.push(value)}},
+  },
+  directory: ".",
+});
+await hooks["permission.ask"]({
+  id: "permission-1",
+  type: "protbind_case_advance",
+  sessionID: "session-1",
+  callID: "call-1",
+  metadata: {args: {continuation_token: "private-token"}},
+}, {status: "ask"});
+await hooks.event({
+  event: {
+    type: "permission.replied",
+    properties: {
+      sessionID: "session-1",
+      permissionID: "permission-1",
+      response: "once",
+    },
+  },
+});
+await hooks["tool.execute.before"]({
+  tool: "protbind_case_advance",
+  sessionID: "session-1",
+  callID: "call-1",
+}, {args: {}});
+const output = {title: "advance", output: "ok", metadata: {}};
+await hooks["tool.execute.after"]({
+  tool: "protbind_case_advance",
+  sessionID: "session-1",
+  callID: "call-1",
+  args: {},
+}, output);
+console.log(JSON.stringify({
+  status: plan.status,
+  digestLength: plan.arguments_sha256.length,
+  leaked: JSON.stringify(plan).includes("private-token"),
+  postflight: plan.safe_idle_tasks.includes("compile-one-stage-postflight-checklist"),
+  pluginStatus: output.metadata.protbind_shadow_plan.status,
+  pluginLeaked: JSON.stringify({toasts, logs, output}).includes("private-token"),
+}));
+"""
+    completed = subprocess.run(
+        ["bun", "-e", script],
+        cwd=REPOSITORY_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    result = json.loads(completed.stdout)
+    assert result == {
+        "status": "WAITING_APPROVAL",
+        "digestLength": 64,
+        "leaked": False,
+        "postflight": True,
+        "pluginStatus": "EXECUTED",
+        "pluginLeaked": False,
+    }
 
 
 def test_opencode_mcp_uses_aiaa_stdio_and_no_worker_placeholders() -> None:

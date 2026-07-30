@@ -7,7 +7,13 @@ from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from typing import Any
 
-from radeon_agent.tools import SideEffect, ToolPermissionError, ToolRegistry, ToolSpec
+from radeon_agent.tools import (
+    SideEffect,
+    ToolPendingError,
+    ToolPermissionError,
+    ToolRegistry,
+    ToolSpec,
+)
 
 from .agent_views import (
     compact_case_advance,
@@ -17,7 +23,12 @@ from .agent_views import (
 )
 from .experience import ExperienceStore
 from .mcp_server import ProtBindMCPService
-from .plan_ahead import ShadowPlan, build_shadow_plan, digest_arguments
+from .plan_ahead import (
+    ShadowPlan,
+    build_shadow_plan,
+    digest_arguments,
+    shadow_plan_is_current,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -30,6 +41,8 @@ class ActionPreview:
     scientific_state_change: bool
     expected_next_state: str
     recovery: str
+    manifest_sha256: str | None = None
+    policy_sha256: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -38,9 +51,11 @@ class ToolAuditEvent:
     confirmed: bool
     started_at_monotonic: float
     duration_seconds: float
-    ok: bool
+    ok: bool | None
     error_type: str | None
     shadow_plan_id: str | None = None
+    approval_id: str | None = None
+    status: str = "FINISHED"
 
 
 ConfirmationCallback = Callable[[ActionPreview], bool]
@@ -84,6 +99,94 @@ class ProtBindAgentTools:
         self.experience = ExperienceStore(service.workspace, service.workflow)
         self.audit_events: list[ToolAuditEvent] = []
         self.shadow_plans: list[ShadowPlan] = []
+        self._gate_snapshots: dict[tuple[str, str], tuple[str, str]] = {}
+
+    def _active_approval_id(self) -> str | None:
+        value = getattr(self.confirmation, "active_approval_id", None)
+        return value if isinstance(value, str) else None
+
+    def _complete_approval(self, *, ok: bool, error_type: str | None) -> None:
+        callback = getattr(self.confirmation, "complete_current", None)
+        if callable(callback):
+            callback(ok=ok, error_type=error_type)
+
+    def _approval_status(self) -> str | None:
+        callback = getattr(self.confirmation, "current_status", None)
+        if not callable(callback):
+            return None
+        value = callback()
+        return value if isinstance(value, str) else None
+
+    def _mark_stale_approval(self, *, error_type: str) -> None:
+        callback = getattr(self.confirmation, "mark_stale_current", None)
+        if callable(callback):
+            callback(error_type=error_type)
+
+    def _capture_case_status(self, result: Any) -> None:
+        if not isinstance(result, dict):
+            return
+        gate = result.get("gate")
+        if not isinstance(gate, dict):
+            return
+        run_id = gate.get("run_id")
+        token = gate.get("continuation_token")
+        manifest_sha256 = gate.get("manifest_sha256")
+        policy_sha256 = gate.get("policy_sha256")
+        if not all(
+            isinstance(item, str) and item
+            for item in (run_id, token, manifest_sha256, policy_sha256)
+        ):
+            return
+        self._gate_snapshots[(run_id, token)] = (
+            manifest_sha256,
+            policy_sha256,
+        )
+        while len(self._gate_snapshots) > 128:
+            self._gate_snapshots.pop(next(iter(self._gate_snapshots)))
+
+    def _case_advance_snapshot(
+        self,
+        arguments: dict[str, Any],
+    ) -> tuple[str | None, str | None]:
+        run_id = arguments.get("run_id")
+        token = arguments.get("continuation_token")
+        if not isinstance(run_id, str) or not isinstance(token, str):
+            return None, None
+        return self._gate_snapshots.get((run_id, token), (None, None))
+
+    def _revalidate_case_advance(
+        self,
+        arguments: dict[str, Any],
+        plan: ShadowPlan,
+    ) -> None:
+        run_id = arguments.get("run_id")
+        continuation_token = arguments.get("continuation_token")
+        if not isinstance(run_id, str) or not isinstance(continuation_token, str):
+            raise ToolPermissionError("case_advance approval arguments are invalid")
+        fresh = self.service.case_status(run_id)
+        self._capture_case_status(fresh)
+        gate = fresh.get("gate") if isinstance(fresh, dict) else None
+        if not isinstance(gate, dict):
+            self._mark_stale_approval(error_type="GateRevalidationError")
+            raise ToolPermissionError("approval is stale: fresh gate is unavailable")
+        manifest_sha256 = gate.get("manifest_sha256")
+        policy_sha256 = gate.get("policy_sha256")
+        fresh_token = gate.get("continuation_token")
+        current = shadow_plan_is_current(
+            plan,
+            arguments_sha256=digest_arguments(arguments),
+            manifest_sha256=(
+                manifest_sha256 if isinstance(manifest_sha256, str) else None
+            ),
+            policy_sha256=(
+                policy_sha256 if isinstance(policy_sha256, str) else None
+            ),
+        )
+        if fresh_token != continuation_token or not current:
+            self._mark_stale_approval(error_type="StaleContinuationToken")
+            raise ToolPermissionError(
+                "approval is stale: request a fresh case_status and confirmation"
+            )
 
     def _handler(
         self,
@@ -92,26 +195,58 @@ class ProtBindAgentTools:
         *,
         preview: Callable[[dict[str, Any]], ActionPreview] | None = None,
         inject_data_confirmation: bool = False,
+        revalidate: Callable[[dict[str, Any], ShadowPlan], None] | None = None,
+        observe_result: Callable[[Any], None] | None = None,
     ) -> Callable[[dict[str, Any]], Any]:
         def execute(arguments: dict[str, Any]) -> Any:
             started = time.monotonic()
             confirmed = preview is None
             shadow_plan: ShadowPlan | None = None
+            approval_id = self._active_approval_id()
             try:
                 values = dict(arguments)
                 if preview is not None:
                     action_preview = preview(values)
                     shadow_plan = build_shadow_plan(action_preview)
-                    self.shadow_plans.append(shadow_plan)
+                    if approval_id is None:
+                        self.shadow_plans.append(shadow_plan)
                     confirmed = self.confirmation(action_preview)
                     if not confirmed:
                         raise ToolPermissionError(
                             f"user declined or did not confirm tool {name!r}"
                         )
+                    if revalidate is not None:
+                        revalidate(values, shadow_plan)
                 if inject_data_confirmation:
                     values["data_access_confirmed"] = True
                 result = function(**values)
+                if observe_result is not None:
+                    observe_result(result)
+            except ToolPendingError as exc:
+                pending_approval_id = exc.pending.get("approval_id")
+                self.audit_events.append(
+                    ToolAuditEvent(
+                        tool=name,
+                        confirmed=False,
+                        started_at_monotonic=started,
+                        duration_seconds=time.monotonic() - started,
+                        ok=None,
+                        error_type=None,
+                        shadow_plan_id=(
+                            shadow_plan.plan_id if shadow_plan is not None else None
+                        ),
+                        approval_id=(
+                            pending_approval_id
+                            if isinstance(pending_approval_id, str)
+                            else None
+                        ),
+                        status="WAITING_APPROVAL",
+                    )
+                )
+                raise
             except Exception as exc:
+                self._complete_approval(ok=False, error_type=type(exc).__name__)
+                approval_status = self._approval_status()
                 self.audit_events.append(
                     ToolAuditEvent(
                         tool=name,
@@ -123,9 +258,20 @@ class ProtBindAgentTools:
                         shadow_plan_id=(
                             shadow_plan.plan_id if shadow_plan is not None else None
                         ),
+                        approval_id=approval_id,
+                        status=(
+                            approval_status
+                            or (
+                                "DECLINED"
+                                if isinstance(exc, ToolPermissionError)
+                                and not confirmed
+                                else "FAILED"
+                            )
+                        ),
                     )
                 )
                 raise
+            self._complete_approval(ok=True, error_type=None)
             self.audit_events.append(
                 ToolAuditEvent(
                     tool=name,
@@ -137,6 +283,8 @@ class ProtBindAgentTools:
                     shadow_plan_id=(
                         shadow_plan.plan_id if shadow_plan is not None else None
                     ),
+                    approval_id=approval_id,
+                    status="EXECUTED",
                 )
             )
             return result
@@ -153,8 +301,14 @@ class ProtBindAgentTools:
         scientific_state_change: bool = False,
         expected_next_state: str = "unchanged",
         recovery: str = "No scientific state is changed on failure.",
+        snapshot: (
+            Callable[[dict[str, Any]], tuple[str | None, str | None]] | None
+        ) = None,
     ) -> Callable[[dict[str, Any]], ActionPreview]:
         def build(_arguments: dict[str, Any]) -> ActionPreview:
+            manifest_sha256, policy_sha256 = (
+                snapshot(_arguments) if snapshot is not None else (None, None)
+            )
             return ActionPreview(
                 tool=tool,
                 arguments_sha256=digest_arguments(_arguments),
@@ -164,6 +318,8 @@ class ProtBindAgentTools:
                 scientific_state_change=scientific_state_change,
                 expected_next_state=expected_next_state,
                 recovery=recovery,
+                manifest_sha256=manifest_sha256,
+                policy_sha256=policy_sha256,
             )
 
         return build
@@ -183,7 +339,11 @@ class ProtBindAgentTools:
                 "case_status",
                 "Deep-audit one run and return its fresh one-stage continuation gate.",
                 _object(run, required=("run_id",)),
-                self._handler("case_status", self.service.case_status),
+                self._handler(
+                    "case_status",
+                    self.service.case_status,
+                    observe_result=self._capture_case_status,
+                ),
                 result_view=compact_case_status,
             ),
             ToolSpec(
@@ -317,7 +477,9 @@ class ProtBindAgentTools:
                         recovery=(
                             "Retry requires a newly issued gate token; tokens are never reused."
                         ),
+                        snapshot=self._case_advance_snapshot,
                     ),
+                    revalidate=self._revalidate_case_advance,
                 ),
                 SideEffect.LOCAL_WRITE,
                 result_view=compact_case_advance,

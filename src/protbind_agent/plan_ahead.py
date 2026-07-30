@@ -12,6 +12,7 @@ from dataclasses import asdict, dataclass
 from typing import Any, Protocol
 
 SHADOW_PLAN_SCHEMA_VERSION = "1.0"
+SHADOW_PLAN_PROTOCOL_REVISION = "2"
 
 
 class ActionPreviewLike(Protocol):
@@ -23,6 +24,8 @@ class ActionPreviewLike(Protocol):
     scientific_state_change: bool
     expected_next_state: str
     recovery: str
+    manifest_sha256: str | None
+    policy_sha256: str | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -35,6 +38,7 @@ class ShadowPlanSnapshot:
 @dataclass(frozen=True, slots=True)
 class ShadowPlan:
     schema_version: str
+    protocol_revision: str
     kind: str
     status: str
     plan_id: str
@@ -93,11 +97,20 @@ def build_shadow_plan(
         safe_tasks.append("compile-one-stage-postflight-checklist")
 
     snapshot = ShadowPlanSnapshot(
-        manifest_sha256=manifest_sha256,
-        policy_sha256=policy_sha256,
+        manifest_sha256=(
+            manifest_sha256
+            if manifest_sha256 is not None
+            else getattr(preview, "manifest_sha256", None)
+        ),
+        policy_sha256=(
+            policy_sha256
+            if policy_sha256 is not None
+            else getattr(preview, "policy_sha256", None)
+        ),
     )
     payload = {
         "schema_version": SHADOW_PLAN_SCHEMA_VERSION,
+        "protocol_revision": SHADOW_PLAN_PROTOCOL_REVISION,
         "kind": "protbind.shadow-plan",
         "status": "WAITING_APPROVAL",
         "tool": preview.tool,
@@ -129,6 +142,7 @@ def build_shadow_plan(
     }
     return ShadowPlan(
         schema_version=SHADOW_PLAN_SCHEMA_VERSION,
+        protocol_revision=SHADOW_PLAN_PROTOCOL_REVISION,
         kind="protbind.shadow-plan",
         status="WAITING_APPROVAL",
         plan_id=_plan_id(payload),

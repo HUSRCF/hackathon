@@ -181,7 +181,7 @@ scripts/aiaa-protbind.sh -m protbind_agent mcp serve \
   --library-config .protbind/library.json \
   --knowledge-model .protbind/models/bge-m3
 
-# 不依赖 OpenCode 的内置 Agent；每个写操作仍逐次显示并要求确认
+# 不依赖 OpenCode 的内置 Agent；每个写操作暂停、显示计划并逐次要求确认
 scripts/aiaa-protbind.sh -m protbind_agent agent \
   --backend hipfire --model qwen3.5:9b \
   --workspace artifacts/protbind \
@@ -223,6 +223,15 @@ hash-bound ShadowPlan，只罗列可取消的条件分支和 UI/report 准备工
 写入。协议、威胁模型和性能验收见
 [ShadowPlan Spotlight](DOCs/PROTBIND_SHADOWPLAN_SPOTLIGHT.md)；可用
 `--no-tool-routing` 生成完整 schema 的对照运行。
+
+protocol revision 2 已把确认从工具 handler 内的同步回调改为进程内
+`WAITING_APPROVAL -> resume`：pending call 不会作为假失败送回模型，等待时间不占 Agent
+active-compute timeout；批准或拒绝时会先取消只处理脱敏计划的 CPU idle tasks。CLI 保持同一进程
+并在每个 fresh `approval_id` 后恢复；`case_advance` dispatch 前还会重新取得 gate，核对 token、
+manifest 和 control policy。项目级
+[`protbind-shadowplan.ts`](.opencode/plugins/protbind-shadowplan.ts) 插件在 OpenCode 1.18.8 中
+监听 permission/tool/session 生命周期，以 toast、server log 和 tool metadata 展示计划状态；
+OpenCode 仍只负责交互，科学状态继续由 ProtBind receipt 决定。
 
 `memory_write` 不接受模型提供候选、分数或结论。它只从深审计通过的 `REPORTED` manifest
 确定性派生 experience artifact；检索投影只能作为历史提示，不会自动改变 box、seed、筛选阈值或

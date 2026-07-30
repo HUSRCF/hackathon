@@ -33,6 +33,7 @@ def test_shadow_plan_is_deterministic_and_contains_no_raw_arguments() -> None:
 
     assert first == second
     assert first.status == "WAITING_APPROVAL"
+    assert first.protocol_revision == "2"
     assert first.plan_id == second.plan_id
     rendered = str(first.to_dict())
     assert "private-run-name" not in rendered

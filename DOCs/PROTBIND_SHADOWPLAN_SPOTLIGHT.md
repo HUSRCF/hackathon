@@ -1,6 +1,6 @@
 # ProtBind ShadowPlan Spotlight
 
-状态：protocol revision 1，2026-07-30 冻结。
+状态：protocol revision 2，2026-07-31 冻结。
 
 适用范围：内置 HipFire Agent、ProtBind MCP/OpenCode 适配器和本地 Web/CLI。
 科学状态源：ProtBind manifest、stage-gate receipt 和 content-addressed artifact；ShadowPlan
@@ -58,8 +58,8 @@ token；批准后仍须重新验证 manifest 和 control-policy 绑定。
 而不是先优化仅占约 14%–16% 的工具编排。
 
 HipFire Qwen 路径采用上一轮对话的 LCP prompt cache。正式基线第二轮明显快于第一轮，但独立
-ShadowPlan 大模型会话会形成分叉或更短 prompt，可能让单活跃前缀冷启动。protocol revision 1
-禁止在同一 HipFire 模型实例中插入并发影子 LLM 会话。
+ShadowPlan 大模型会话会形成分叉或更短 prompt，可能让单活跃前缀冷启动。protocol revision 2
+继续禁止在同一 HipFire 模型实例中插入并发影子 LLM 会话。
 
 ## 3. 三条执行通道
 
@@ -87,6 +87,7 @@ Control lane 始终有最高优先级。Idle lane 必须可取消，且不能减
 ```json
 {
   "schema_version": "1.0",
+  "protocol_revision": "2",
   "kind": "protbind.shadow-plan",
   "status": "WAITING_APPROVAL",
   "plan_id": "sha256 without prefix",
@@ -120,6 +121,22 @@ Control lane 始终有最高优先级。Idle lane 必须可取消，且不能减
 `plan_id` 对不含生成时间的安全投影做 canonical SHA-256，因此同一 action preview 可重复验证。
 原始参数、内部绝对路径、私有序列、API key 和 continuation token 不进入计划；只保存参数摘要。
 
+批准请求另有随机且逐调用新建的 `approval_id`。它不是 `plan_id`：两个参数和 snapshot 完全相同的
+动作可以得到相同的确定性 `plan_id`，但每次调用仍需要不同、只消费一次的 `approval_id`。批准请求
+状态固定为：
+
+```text
+WAITING_APPROVAL
+  -> APPROVED -> DISPATCHING -> EXECUTED | FAILED
+  -> DECLINED
+  -> STALE
+```
+
+Pending 工具调用不会被伪装成 `ok=false` 的工具结果送回模型。Agent 保存当前 tool-call batch，
+`resume(session_id, approval_id, approved=...)` 后从同一 call 继续；批准等待时间不计入 active-compute
+timeout。一个模型回合若并列提出多个 permissioned call，运行时也必须逐个暂停并取得各自的新
+`approval_id`，不能让第一次批准覆盖整个 batch。
+
 ## 5. 允许与禁止的 idle work
 
 等待批准期间始终允许：
@@ -147,6 +164,11 @@ Control lane 始终有最高优先级。Idle lane 必须可取消，且不能减
 - 把计划、截图、检索或历史经验升级为科学证据。
 
 用户拒绝后必须丢弃 ephemeral ShadowPlan。不得将拒绝本身或计划内容自动写入 PowerMem/experience。
+
+revision 2 的默认 idle runner 只在内存中依次执行上述安全投影，为每项输出保存 SHA-256、字节数、
+耗时和 `COMPLETED | CANCELLED | FAILED` 状态。收到批准或拒绝时先发 cancellation signal 并等待
+runner 收束，再 dispatch 或丢弃计划。runner 不接收 service、workspace、网络 client、数据库或
+continuation token，因此没有旁路数据访问能力。
 
 ## 6. P0 延迟优化
 
@@ -194,13 +216,16 @@ projection 不得删除模型完成下一次合法调用所需的字段，也不
 
 ## 7. OpenCode 适配边界
 
-OpenCode 是交互适配器，不是科学状态机。插件可订阅：
+OpenCode 是交互适配器，不是科学状态机。revision 2 的项目插件为
+`.opencode/plugins/protbind-shadowplan.ts`，在本机冻结的 OpenCode 1.18.8 上订阅：
 
-- `permission.asked` / `permission.replied`
+- `permission.ask` hook；
+- `permission.updated` / `permission.asked` / `permission.replied` event；
 - `tool.execute.before` / `tool.execute.after`
 - `session.status` / `session.idle`
 
-这些事件以 OpenCode 官方
+OpenCode 1.18.8 的 SDK 类型把等待事件命名为 `permission.updated`，滚动版官方文档使用
+`permission.asked`；适配器兼容二者。事件和 hook 仍以 OpenCode 官方
 [Plugins](https://opencode.ai/docs/plugins/) 文档为准；需要独立前端时，可使用官方
 [Server SSE/OpenAPI](https://opencode.ai/docs/server/) 和
 [SDK session/abort](https://opencode.ai/docs/sdk/) 接口。比赛冻结版本必须另记实际 OpenCode
@@ -210,11 +235,13 @@ OpenCode 是交互适配器，不是科学状态机。插件可订阅：
 
 - 展示 ShadowPlan、tool timeline 和批准范围；
 - 在用户回复时取消 idle work；
-- 将批准结果交回 ProtBind；
+- 观察 OpenCode 原生批准结果并在 native tool dispatch 前取消 idle work；
 - 显示 adopted、declined 或 stale receipt。
 
 插件不得直接读取私有目录、调用网络、执行 shell、签发 continuation token 或修改 manifest。
 内置 Agent、CLI 和 Web UI 应消费同一 PlanAhead contract，避免把安全闭环绑定到 OpenCode。
+插件只把安全 ShadowPlan 写入 OpenCode log、toast 和完成工具的 metadata；原始参数只用于内存中
+计算摘要，不进入 toast、log 或 receipt。
 
 ## 8. 验收与证据
 
@@ -265,13 +292,26 @@ P0：
 上述 schema 数字是确定性输入规模检查，不是 TTFT 或 E2E 加速结论。新的 Radeon/HipFire A/B
 receipt 生成前，正式性能基线仍是第 2 节记录的 16.552 s p50。
 
-P1：
+P1（protocol revision 2，2026-07-31）：
 
-- 非阻塞 `WAITING_APPROVAL -> resume` runtime；
-- snapshot/policy revalidation；
-- OpenCode event plugin；
-- Web/CLI plan timeline；
-- controlled approval-delay benchmark。
+- 已完成：非阻塞 `WAITING_APPROVAL -> resume` 进程内 runtime；
+- 已完成：批准/拒绝时可取消的 CPU-only deterministic idle runner；
+- 已完成：`case_advance` 批准后 fresh `case_status`、token、manifest 和 policy revalidation；
+- 已完成：OpenCode 1.18.8 event/hook plugin 与 CLI approval timeline；
+- 待完成：跨进程 pending-session 持久化；当前刻意不把原始 tool arguments 写盘，CLI 在同一进程
+  中等待并 resume；
+- 待完成：Web plan timeline 和 controlled approval-delay benchmark。
+
+revision 2 的本地实现检查：
+
+- 385 项 pytest 全量回归和 `ruff check .` 通过；
+- Bun 1.3.13 可将项目插件独立 bundle 为一个无外部运行时依赖的 JavaScript entry；
+- `opencode debug config` 在 OpenCode 1.18.8 中发现项目级插件
+  `file://.../.opencode/plugins/protbind-shadowplan.ts`；
+- 插件源码 SHA-256：
+  `80f41ba11c541b865f048ee659c7d99dc78ca901aa7338ac2266c26b4ec85ff0`；
+- fake-client hook 回归覆盖 permission reply、tool before/after、tool metadata adoption，并证明原始
+  continuation token 不进入 toast、log、plan 或 metadata。
 
 P2：
 
