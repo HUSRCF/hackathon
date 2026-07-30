@@ -8,7 +8,7 @@ from typing import Any
 
 from . import __version__
 from .artifacts import ArtifactStore, canonical_json_bytes
-from .manifest import STAGE_ORDER, CofoldStatus, RunManifest, RunState
+from .manifest import STAGE_ORDER, CofoldStatus, RunManifest
 from .models import ArtifactRef
 from .privacy import redact_text
 
@@ -23,7 +23,7 @@ def _artifact_summary(reference: ArtifactRef) -> dict[str, Any]:
         "size_bytes": reference.size_bytes,
         "producer": reference.producer,
         "producer_version": reference.producer_version,
-        "source": reference.source,
+        "source": redact_text(reference.source) if reference.source is not None else None,
         "license": reference.license,
     }
 
@@ -58,6 +58,16 @@ def _control_receipts(
         actions = value.get("required_actions", [])
         if not isinstance(checks, list) or not isinstance(actions, list):
             raise ValueError("control receipt checks/actions are invalid")
+        sanitized_checks = []
+        for check in checks:
+            if not isinstance(check, dict):
+                raise ValueError("control receipt check must be an object")
+            sanitized_checks.append(
+                {
+                    **check,
+                    "detail": redact_text(str(check.get("detail", ""))),
+                }
+            )
         receipts.append(
             {
                 "artifact_id": reference.artifact_id,
@@ -66,7 +76,7 @@ def _control_receipts(
                 "stage": value.get("stage"),
                 "decision": value.get("decision"),
                 "manifest_sha256": value.get("manifest_sha256"),
-                "checks": checks,
+                "checks": sanitized_checks,
                 "required_actions": [redact_text(str(item)) for item in actions],
                 "automatic_retry": value.get("automatic_retry", False),
                 # Continuation tokens are deliberately not copied into reports.
@@ -100,7 +110,7 @@ def _stage_rows(
                 if acceptance is not None and acceptance.get("decision") == "ACCEPTED"
                 else "COMPLETED_UNRECEIPTED"
             )
-        elif latest_failure is not None and latest_failure.stage is stage:
+        elif latest_failure is not None and latest_failure.stage == stage:
             status = "BLOCKED_RETRYABLE" if latest_failure.recoverable else "FAILED"
         elif manifest.next_stage is stage:
             status = "NEXT"

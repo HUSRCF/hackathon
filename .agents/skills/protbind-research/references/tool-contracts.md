@@ -10,6 +10,12 @@ network tool.
 - `protbind_case_status(run_id)`: deep-audit the run and return the current preflight gate.
 - `protbind_case_report(run_id, format)`: return bounded `markdown`, `html`, or `degraded` report
   text when available; structure coordinates are never returned.
+- `protbind_case_dossier(run_id, format)`: return the detailed current-stage completion,
+  acceptance-receipt, timing, warning, failure, artifact, and pose-QA dossier as `json`,
+  `markdown`, or `html`. Continuation tokens and coordinate bytes are never returned.
+- `protbind_case_pose_view(run_id)`: return coordinate-free pose, validation, docking-box, and
+  deterministic Gemmi/RDKit geometry metadata plus loopback viewer paths. It may create an
+  immutable derived scene artifact but never changes the scientific manifest or stage state.
 - `protbind_artifact_metadata(artifact_ref_json)`: verify a complete serialized `ArtifactRef` and
   return metadata only.
 - `protbind_control_history(run_id)`: return content-addressed gate/acceptance receipt references.

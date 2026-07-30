@@ -14,6 +14,7 @@ from .dossier import build_run_dossier, dossier_html
 from .manifest import ManifestStore, RunManifest
 from .models import ArtifactRef
 from .pose_view import build_pose_scene_summary
+from .web_assets import installed_3dmol_status
 from .workflow import ProtBindWorkflow
 
 
@@ -116,7 +117,7 @@ def create_app(workspace: Path) -> Any:
 
     @app.get("/", response_class=HTMLResponse)
     @app.get("/cases", response_class=HTMLResponse)
-    def cases() -> str:
+    async def cases() -> str:
         return _page(
             "Research cases",
             "<table hx-get='/fragments/runs' hx-trigger='every 5s' hx-swap='innerHTML'>"
@@ -125,11 +126,11 @@ def create_app(workspace: Path) -> Any:
         )
 
     @app.get("/fragments/runs", response_class=HTMLResponse)
-    def run_fragment() -> str:
+    async def run_fragment() -> str:
         return run_rows()
 
     @app.get("/dossiers", response_class=HTMLResponse)
-    def dossiers() -> str:
+    async def dossiers() -> str:
         return _page(
             "Run completion dossiers",
             "<p>Each dossier distinguishes core computation from stage-gate acceptance and "
@@ -139,7 +140,7 @@ def create_app(workspace: Path) -> Any:
         )
 
     @app.get("/runs/{run_id}/dossier", response_class=HTMLResponse)
-    def run_dossier(run_id: str) -> str:
+    async def run_dossier(run_id: str) -> str:
         manifest = load_manifest(run_id)
         poses = build_pose_scene_summary(manifest, artifacts)
         dossier = build_run_dossier(
@@ -151,7 +152,7 @@ def create_app(workspace: Path) -> Any:
         return dossier_html(dossier)
 
     @app.get("/funnel", response_class=HTMLResponse)
-    def funnel() -> str:
+    async def funnel() -> str:
         return _page(
             "Screening funnel",
             "<p>100,000 → TriPharm 512 → scaffold diversity 128 → quick Vina 16 → "
@@ -162,14 +163,14 @@ def create_app(workspace: Path) -> Any:
         )
 
     @app.get("/poses", response_class=HTMLResponse)
-    def poses() -> str:
-        asset = root / "static" / "3Dmol-min.js"
+    async def poses() -> str:
+        asset_status = installed_3dmol_status(root)
         status = (
-            "Pinned local 3Dmol.js asset is installed."
-            if asset.is_file()
+            "Pinned local 3Dmol.js asset is installed and SHA-256 verified."
+            if asset_status["verified"]
             else (
-                "3Dmol.js is not installed locally; remote CDN loading is disabled. "
-                "Pose metadata remains available, but interactive rendering is unavailable."
+                "3Dmol.js is unavailable or unverified; remote CDN loading is disabled. "
+                f"{asset_status['reason']}. Pose metadata remains available."
             )
         )
         rows: list[str] = []
@@ -207,7 +208,7 @@ def create_app(workspace: Path) -> Any:
         )
 
     @app.get("/runs/{run_id}/poses", response_class=HTMLResponse)
-    def run_poses(run_id: str) -> str:
+    async def run_poses(run_id: str) -> str:
         summary = pose_summary(run_id)
         rows = []
         for scene in summary["candidates"]:
@@ -230,7 +231,7 @@ def create_app(workspace: Path) -> Any:
         )
 
     @app.get("/runs/{run_id}/poses/{candidate_id}", response_class=HTMLResponse)
-    def pose_page(run_id: str, candidate_id: str) -> str:
+    async def pose_page(run_id: str, candidate_id: str) -> str:
         scene = selected_scene(run_id, candidate_id)
         geometry = scene["geometry"]
         validation = scene["validation"]
@@ -298,10 +299,14 @@ def create_app(workspace: Path) -> Any:
         return _page(f"Pose — {candidate_id}", body)
 
     @app.get("/static/3Dmol-min.js")
-    def three_dmol() -> Response:
+    async def three_dmol() -> Response:
+        status = installed_3dmol_status(root)
+        if not status["verified"]:
+            raise HTTPException(
+                status_code=409,
+                detail=f"local 3Dmol.js asset is not verified: {status['reason']}",
+            )
         asset = root / "static" / "3Dmol-min.js"
-        if not asset.is_file():
-            raise HTTPException(status_code=404, detail="local 3Dmol.js asset not installed")
         return Response(
             asset.read_bytes(),
             media_type="text/javascript",
@@ -312,11 +317,11 @@ def create_app(workspace: Path) -> Any:
         )
 
     @app.get("/api/runs/{run_id}/poses/{candidate_id}", response_class=JSONResponse)
-    def pose_metadata(run_id: str, candidate_id: str) -> dict[str, Any]:
+    async def pose_metadata(run_id: str, candidate_id: str) -> dict[str, Any]:
         return selected_scene(run_id, candidate_id)
 
     @app.get("/api/runs/{run_id}/poses/{candidate_id}/receptor")
-    def pose_receptor(run_id: str, candidate_id: str) -> Response:
+    async def pose_receptor(run_id: str, candidate_id: str) -> Response:
         scene = selected_scene(run_id, candidate_id)
         reference = ArtifactRef.from_dict(scene["receptor"])
         return Response(
@@ -326,7 +331,7 @@ def create_app(workspace: Path) -> Any:
         )
 
     @app.get("/api/runs/{run_id}/poses/{candidate_id}/ligand")
-    def pose_ligand(run_id: str, candidate_id: str) -> Response:
+    async def pose_ligand(run_id: str, candidate_id: str) -> Response:
         scene = selected_scene(run_id, candidate_id)
         reference = ArtifactRef.from_dict(scene["pose"])
         return Response(
@@ -336,7 +341,7 @@ def create_app(workspace: Path) -> Any:
         )
 
     @app.get("/evidence", response_class=HTMLResponse)
-    def evidence() -> str:
+    async def evidence() -> str:
         return _page(
             "Evidence",
             "<p>Grades: REDOCKING_RECOVERED, METHOD_CONSENSUS, HYPOTHESIS_ONLY, and "
@@ -346,7 +351,7 @@ def create_app(workspace: Path) -> Any:
         )
 
     @app.get("/rag", response_class=HTMLResponse)
-    def rag() -> str:
+    async def rag() -> str:
         return _page(
             "Private RAG",
             "<p>seekdb/PowerMem is capability-gated. No document or sequence is uploaded "
@@ -354,7 +359,7 @@ def create_app(workspace: Path) -> Any:
         )
 
     @app.get("/performance", response_class=HTMLResponse)
-    def performance() -> str:
+    async def performance() -> str:
         return _page(
             "Radeon performance",
             "<p>Scientific kernels, OpenFold3, OpenMM, and HipFire metrics are reported "

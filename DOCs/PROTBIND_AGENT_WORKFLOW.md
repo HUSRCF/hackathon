@@ -347,8 +347,10 @@ continuation token 绑定 run、完整 manifest SHA-256、下一阶段和控制�
 - `UNSUPPORTED`/`FAILED`：停止，不得静默降级；
 - `COMPLETE`：全部主阶段已有 accepted record。
 
-本地 MCP 只提供 doctor、case create/status/advance/attach/report、artifact metadata 和 control
-history；不提供 shell、任意文件内容或网络。所有路径必须位于 project root，network-enabled case
+本地 MCP 只提供 doctor、case create/status/advance/attach/report/dossier/pose-view、artifact
+metadata 和 control history；不提供 shell、任意文件内容、原始坐标或网络。`case_dossier` 区分
+stage record 与 postflight acceptance，`case_pose_view` 只返回无坐标的 artifact/验证/box/几何
+QA 摘要；两者都不能修改 manifest 或推进阶段。所有路径必须位于 project root，network-enabled case
 也会被 MCP create 拒绝。OpenCode 项目配置只启用本地 HipFire 与该 MCP，mutating tools 均为
 `ask`，其他工具默认 `deny`。MCP 1.14 的 AIAA stdio 已完成真实 initialize/list-tools 握手；OpenCode
 可执行文件和 HipFire 对话尚未在当前宿主实跑，因此这只是协议/权限闭环证据，不是完整交互 demo。
@@ -399,10 +401,10 @@ ESMFold v1 的 24 aa 本机 smoke 峰值约 7.91 GiB，但这不是 700 aa 上�
 | evidence-grade Vina | worker 可直接消费 SELECTED；规范 SDF、原始 PDBQT 和逐候选失败均已绑定 |
 | OpenFold3 | 官方 ROCm runtime validator 通过；checkpoint/真实 inference 未运行；仅有 cofold batch 验证器，无公开 batch builder/CLI，保持专家导入的可选旁路 |
 | validation | docking-derived batch/toolchain、pose/receptor attestation 已实现；原始 fixed-ten 为 8 completed/2 failed、top-1/top-5 7/10；`repair-protocol-v1` 为 9 completed/1 failed、独立 8/10；`repair-protocol-v2-restrained-sidechain` 为 10/10 completed、独立 top-1/top-5 9/10、IFP mean/median 0.6598/0.7014、`gate_complete=true`；三版结果分别保留，v2 仍是已观察 holdout 上的受控修订 |
-| deterministic report | Markdown/HTML 已实现 |
+| deterministic report | 最终 Markdown/HTML 已实现；任意 checkpoint 的 JSON/Markdown/HTML run dossier 已接，区分 computed 与 accepted |
 | seekdb/BGE-M3 | adapter 和本地权重门已实现；完整资料集需显式导入 |
 | HipFire/OpenCode/PowerMem | 受限 stdio MCP、逐阶段 gate/acceptance receipt、OpenCode default-deny 配置和 project skill 已实现，MCP 1.14 握手通过；OpenCode executable/HipFire TUI 实跑与 PowerMem 仍待完成 |
-| 六页 Web UI | 骨架已实现；本地 3Dmol asset 和真实数据视图待接 |
+| 六页 Web UI | 已接真实 run dossier、pose 列表、loopback receptor/ligand view、box/pocket styles 和浏览器 PNG；3Dmol.js 2.5.4 有固定 URL/SHA-256/许可证安装器，仍待公开真实复合物浏览器验收 |
 
 下一组实现应按以下顺序进行：
 
@@ -416,5 +418,7 @@ ESMFold v1 的 24 aa 本机 smoke 峰值约 7.91 GiB，但这不是 700 aa 上�
    把同一已观察 holdout 的 9/10 写成 prospective 成绩；
 3. 将 fpocket/P2Rank 共识、已实现的保守受体修复/ProLIF crop 和 ESMFold v1 receipt 自动调度接入
    主流程；
-4. 若继续 OpenFold3，先实现由 frozen selection 生成 cofold batch 的公开 builder/CLI，再决定是否
+4. 用一个公开、可再分发的 canonical DOCKED/VALIDATED run 做浏览器端 3Dmol 与 PNG 人工验收，
+   并保存 viewer 版本/hash 与 camera/selection 参数；截图仍不得进入科学 evidence grade；
+5. 若继续 OpenFold3，先实现由 frozen selection 生成 cofold batch 的公开 builder/CLI，再决定是否
    导入 checkpoint 作为附加方法一致性证据。

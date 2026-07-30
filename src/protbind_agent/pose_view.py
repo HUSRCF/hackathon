@@ -11,6 +11,7 @@ from . import __version__
 from .artifacts import ArtifactStore
 from .manifest import RunManifest, RunState
 from .models import ArtifactRef, ValidationBundle
+from .privacy import redact_text
 from .validation import classify_evidence
 
 POSE_SCENE_SCHEMA_VERSION = "1.0"
@@ -164,7 +165,7 @@ def _geometry_summary(
     except (ImportError, OSError, RuntimeError, TypeError, ValueError) as exc:
         return {
             "available": False,
-            "reason": f"{type(exc).__name__}: {exc}",
+            "reason": redact_text(f"{type(exc).__name__}: {exc}"),
             "heuristic": True,
             "scientific_gate": False,
         }
@@ -235,7 +236,7 @@ def _validation_map(
             "openmm_stable": bundle.openmm_stable,
             "unsupported_reasons": list(bundle.unsupported_reasons),
             "evidence_artifact_ids": [item.artifact_id for item in bundle.evidence],
-            "decision_reason": str(item.get("decision_reason", "")),
+            "decision_reason": redact_text(str(item.get("decision_reason", ""))),
         }
     return result
 

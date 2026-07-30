@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 from pathlib import Path
 
@@ -21,16 +22,16 @@ Chem = pytest.importorskip("rdkit.Chem")
 
 def _pdb() -> bytes:
     return (
-        "ATOM      1  N   ALA A   1       0.000   0.000   0.000  1.00 20.00"
-        "           N  \n"
-        "ATOM      2  CA  ALA A   1       1.450   0.000   0.000  1.00 20.00"
-        "           C  \n"
-        "ATOM      3  C   ALA A   1       2.050   1.400   0.000  1.00 20.00"
-        "           C  \n"
-        "ATOM      4  O   ALA A   1       1.400   2.400   0.000  1.00 20.00"
-        "           O  \n"
-        "END\n"
-    ).encode()
+        b"ATOM      1  N   ALA A   1       0.000   0.000   0.000  1.00 20.00"
+        b"           N  \n"
+        b"ATOM      2  CA  ALA A   1       1.450   0.000   0.000  1.00 20.00"
+        b"           C  \n"
+        b"ATOM      3  C   ALA A   1       2.050   1.400   0.000  1.00 20.00"
+        b"           C  \n"
+        b"ATOM      4  O   ALA A   1       1.400   2.400   0.000  1.00 20.00"
+        b"           O  \n"
+        b"END\n"
+    )
 
 
 def _sdf() -> bytes:
@@ -203,7 +204,7 @@ def test_dossier_distinguishes_completed_from_closed_loop_accepted(tmp_path) -> 
 
 def test_loopback_web_pose_endpoints_serve_only_selected_artifacts(tmp_path) -> None:
     pytest.importorskip("fastapi")
-    testclient = pytest.importorskip("fastapi.testclient")
+    httpx = pytest.importorskip("httpx")
     store, manifest = _workspace_with_pose(tmp_path)
     from protbind_agent.manifest import ManifestStore
 
@@ -211,12 +212,20 @@ def test_loopback_web_pose_endpoints_serve_only_selected_artifacts(tmp_path) -> 
     static = tmp_path / "static"
     static.mkdir()
     (static / "3Dmol-min.js").write_text("window.$3Dmol={};", encoding="utf-8")
-    client = testclient.TestClient(create_app(tmp_path))
+    async def request_views():
+        transport = httpx.ASGITransport(app=create_app(tmp_path))
+        async with httpx.AsyncClient(
+            transport=transport,
+            base_url="http://127.0.0.1",
+        ) as client:
+            return (
+                await client.get("/runs/view-run/poses/vina-mol-1"),
+                await client.get("/api/runs/view-run/poses/vina-mol-1/receptor"),
+                await client.get("/api/runs/view-run/poses/vina-mol-1/ligand"),
+                await client.get("/api/runs/view-run/poses/vina-mol-1"),
+            )
 
-    page = client.get("/runs/view-run/poses/vina-mol-1")
-    receptor = client.get("/api/runs/view-run/poses/vina-mol-1/receptor")
-    ligand = client.get("/api/runs/view-run/poses/vina-mol-1/ligand")
-    metadata = client.get("/api/runs/view-run/poses/vina-mol-1")
+    page, receptor, ligand, metadata = asyncio.run(request_views())
 
     assert page.status_code == 200
     assert "Download local PNG" in page.text

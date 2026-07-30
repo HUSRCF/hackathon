@@ -16,6 +16,9 @@
 - Treat ProLIF/IFP agreement as method agreement, not proof of binding.
 - Run OpenMM only for supported parameterizable, ordinary noncovalent systems. Record
   parameterization failure instead of imputing energy or stability.
+- Treat the local 3D viewer, browser PNG, residues-within-5-angstrom list, sub-2-angstrom pair
+  count, and docking-box containment as visual-QA aids. They are not PoseBusters, ProLIF,
+  symmetry-aware RMSD, physical stability, affinity, or evidence of binding.
 
 ## Supported v1 scope
 

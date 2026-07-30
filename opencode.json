@@ -68,6 +68,8 @@
     "protbind_doctor": "allow",
     "protbind_case_status": "allow",
     "protbind_case_report": "allow",
+    "protbind_case_dossier": "allow",
+    "protbind_case_pose_view": "allow",
     "protbind_artifact_metadata": "allow",
     "protbind_control_history": "allow",
     "protbind_case_create": "ask",

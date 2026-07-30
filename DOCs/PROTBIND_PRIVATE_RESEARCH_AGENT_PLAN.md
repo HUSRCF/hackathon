@@ -512,8 +512,9 @@ Agent 永远没有通用 shell、任意文件系统或开放网络工具。`.env
 序列和绝对内部路径不得进入日志、报告、benchmark 或公开提交。
 
 Web UI 使用 FastAPI 和 HTMX-compatible fragment，不引入 Node 构建链。Cases、筛选漏斗、3D 姿态、
-证据、RAG 和 Radeon 性能为六个本地页面。3Dmol.js 只从 workspace 本地 asset 提供；缺 asset 时显示
-capability 状态，禁止 CDN fallback。
+证据、RAG 和 Radeon 性能为六个本地页面，另有逐 run dossier。3Dmol.js 2.5.4 通过固定 URL、
+SHA-256 和完整许可证的显式安装器进入 workspace；运行时只从本地已验证 asset 提供，缺失或篡改时
+fail closed，禁止 CDN fallback。受体/配体坐标只发给 loopback 浏览器，不进入 MCP 响应。
 
 ## 7. 验收
 
@@ -569,7 +570,7 @@ mismatch 0、分配 28,401,280 bytes VRAM。一次 7-repetition 运行的 CPU �
 | 7/26–28 | HIP、top-k、gfx1100 profile | triangle matcher 已实跑；persisted-index/top-k 未接 |
 | 7/29–31 | Vina/PB/ProLIF/OpenMM | Vina canonical-SDF/PDBQT、pose/receptor receipts、selection 2.5/quick 1.3/input 1.2/box receipt 2.0、site evidence、known-site calibration consumer、validation lineage 及 v4 direct smoke 已实现；原始 fixed-ten 为 7/10，v1 为 8/10，受约束侧链 v2 为 10/10 completed、独立 9/10 且 revision gate complete；独立 local-crop ProLIF/strain/clash 完成，新的 prospective 外部集、production isolation 和 OpenMM HIP 仍未完成 |
 | 8/1–2 | seekdb/PowerMem/BGE-M3/HipFire | seekdb+BGE gate、default-deny OpenCode project skill、受限 MCP 与逐阶段闭环 gate/acceptance receipt 完成；MCP 1.14 stdio 握手通过，OpenCode/HipFire TUI 实跑与 PowerMem 报告器未接 |
-| 8/3 | Web、3D、报告、demo | 六页面/确定性报告骨架完成；本地 3Dmol asset 与完整 demo 未接 |
+| 8/3 | Web、3D、报告、demo | 最终报告 + checkpoint dossier、真实 pose scene、无坐标 Agent QA、loopback 3Dmol/PNG 与固定 asset 安装器已接；公开真实复合物浏览器验收和完整 demo 未完成 |
 | 8/4–6 | 1/2/4×gfx1100 调度、回归、许可、复现、提交；gfx1201 可选 | 未执行 |
 
 明确排除：现有私有 PLC/Pocket-GVP、ciffixer、PLK 代码/checkpoint；非商业 ESM3 权重；GNINA、smina、

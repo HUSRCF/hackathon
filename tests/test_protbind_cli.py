@@ -113,3 +113,20 @@ def test_case_dossier_and_pose_view_commands_are_read_only_inspection_surfaces()
     assert dossier.case_command == "dossier"
     assert dossier.format == "json"
     assert poses.case_command == "poses"
+
+
+def test_3dmol_asset_installer_requires_explicit_source_mode() -> None:
+    arguments = _build_parser().parse_args(
+        (
+            "assets",
+            "install-3dmol",
+            "--approve-network",
+            "cdn.jsdelivr.net",
+            "--workspace",
+            "private-workspace",
+        )
+    )
+
+    assert arguments.assets_command == "install-3dmol"
+    assert arguments.approve_network == ["cdn.jsdelivr.net"]
+    assert arguments.workspace == Path("private-workspace")

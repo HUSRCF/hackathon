@@ -27,6 +27,8 @@ def test_opencode_configuration_is_local_and_default_deny() -> None:
     )
     assert set(config["provider"]["hipfire"]["models"]) == {"qwen3.5:9b"}
     assert config["permission"]["*"] == "deny"
+    assert config["permission"]["protbind_case_dossier"] == "allow"
+    assert config["permission"]["protbind_case_pose_view"] == "allow"
     assert config["permission"]["protbind_case_advance"] == "ask"
     assert config["permission"]["protbind_case_create"] == "ask"
     assert config["permission"]["protbind_case_attach_support"] == "ask"

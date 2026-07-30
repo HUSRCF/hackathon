@@ -55,6 +55,7 @@ from .tripharm import (
     index_identity,
 )
 from .web import create_app
+from .web_assets import THREEDMOL_HOST, install_3dmol_asset
 from .worker_protocol import WorkerProvenance
 from .workflow import PipelineConfig, ProtBindWorkflow, WorkerConfig
 
@@ -226,6 +227,31 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     index_inspect = index_commands.add_parser("inspect", help="Show index hashes and counts.")
     index_inspect.add_argument("index", type=Path)
+
+    assets = commands.add_parser("assets", help="Install pinned offline Web UI assets.")
+    assets_commands = assets.add_subparsers(dest="assets_command", required=True)
+    assets_3dmol = assets_commands.add_parser(
+        "install-3dmol",
+        help="Install the hash-pinned 3Dmol.js build and its license.",
+    )
+    assets_3dmol.add_argument(
+        "--approve-network",
+        action="append",
+        default=[],
+        metavar="EXACT_DOMAIN",
+        help=f"Approve exact download domain; required value is {THREEDMOL_HOST}.",
+    )
+    assets_3dmol.add_argument(
+        "--from-file",
+        type=Path,
+        help="Use a previously reviewed 3Dmol-min.js instead of network access.",
+    )
+    assets_3dmol.add_argument(
+        "--license-file",
+        type=Path,
+        help="Use the matching reviewed 3Dmol.js LICENSE with --from-file.",
+    )
+    _workspace_argument(assets_3dmol)
 
     case = commands.add_parser("case", help="Run, resume, or inspect research cases.")
     case_commands = case.add_subparsers(dest="case_command", required=True)
@@ -665,6 +691,24 @@ def _run(args: argparse.Namespace) -> int:
             json.dumps(
                 {**asdict(stats), "index_sha256": sha256_file(args.output), "replaced": existed},
                 ensure_ascii=False,
+                indent=2,
+            )
+        )
+        return 0
+
+    if args.command == "assets":
+        if args.assets_command != "install-3dmol":
+            raise AssertionError("unhandled assets command")
+        print(
+            json.dumps(
+                install_3dmol_asset(
+                    args.workspace,
+                    approved_domains=tuple(dict.fromkeys(args.approve_network)),
+                    javascript_file=args.from_file,
+                    license_file=args.license_file,
+                ),
+                ensure_ascii=False,
+                sort_keys=True,
                 indent=2,
             )
         )

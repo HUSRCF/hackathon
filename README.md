@@ -157,8 +157,36 @@ MCP，默认拒绝所有工具；只读状态/报告可直接调用，创建、�
 OpenCode 可原生发现。配置未写入不存在的 production worker digest；因此默认会诚实运行到能力门并
 停住，生产时须由操作者在 MCP command 中加入已审核的
 `--worker-config configs/protbind-workers.toml`。当前环境已完成 MCP 1.14 stdio 握手和 8 个受限
-工具枚举；本机 OpenCode 1.18.8 已完成 DeepSeek V4 Flash 的无工具云端传输冒烟测试。HipFire TUI
-端到端对话仍须在本地模型服务启动后单独验收。
+工具枚举；新增的 `case_dossier` 与 `case_pose_view` 仍为只读、无坐标工具。本机 OpenCode 1.18.8
+已完成 DeepSeek V4 Flash 的无工具云端传输冒烟测试。HipFire TUI 端到端对话仍须在本地模型服务
+启动后单独验收。
+
+### 运行 dossier 与本地姿态查看器
+
+`case report` 是最终科学结论报告；`case dossier` 是任意时点的执行账本，逐阶段列出计算完成、
+postflight acceptance、耗时、输入/配置/cache hash、输出、warning、失败和 artifact inventory。
+二者不可互换：一个阶段有 stage record 但没有 `ACCEPTED` receipt 时，dossier 会明确显示
+`COMPLETED_UNRECEIPTED`，不会假装闭环完成。
+
+```bash
+protbind case dossier <run-id> --format markdown
+protbind case poses <run-id>
+
+# 仅首次预取；精确批准域名，固定 3Dmol.js 2.5.4 并校验 SHA-256/许可证
+protbind assets install-3dmol \
+  --approve-network cdn.jsdelivr.net \
+  --workspace artifacts/protbind
+
+# 此后可拔网运行，只监听回环地址
+protbind serve --workspace artifacts/protbind
+# 浏览 http://127.0.0.1:8765/runs/<run-id>/poses
+```
+
+也可以用 `--from-file <3Dmol-min.js> --license-file <LICENSE>` 完全离线安装；文件仍必须与冻结哈希
+一致。浏览器只从 workspace 的已验证 asset 加载，不回退 CDN。受体/配体坐标只由 loopback viewer
+按所选 candidate 读取；MCP/Agent 只看到 artifact 引用、Vina 工具分数、验证结果、box 和
+Gemmi/RDKit 生成的无坐标几何摘要。PNG、近距离 pair 计数、box containment 和人工观感仅是 QA，
+不能替代 PoseBusters、ProLIF、对称 RMSD 或 OpenMM。
 
 配置 `[workers.select]` 后，`SELECTED` 会自动从 `SCREENED` 生成 Bemis–Murcko top-128、微状态和
 typed `protbind.quick-vina-input`，用独立的 CPU-only `vina-quick` profile 完整评估计划请求，再按真实

@@ -18,7 +18,9 @@ source of scientific state; never invent structures, scores, validation results,
 5. Require `acceptance.decision=ACCEPTED` before treating that stage as complete.
 6. Inspect `next_gate` and repeat only when the user wants to continue. Never auto-retry a failure.
 7. Stop on `NEEDS_ACTION`, `UNSUPPORTED`, or `FAILED`; resolve only the stated action, then request
-   a fresh status. On `COMPLETE`, retrieve the deterministic report.
+   a fresh status. After `DOCKED`, use `protbind_case_pose_view` only for coordinate-free visual-QA
+   metadata. At any checkpoint use `protbind_case_dossier` to distinguish computed stages from
+   accepted stages. On `COMPLETE`, retrieve both the deterministic report and dossier.
 
 Use `protbind_case_create` only for project-relative, offline case and index files. Use
 `protbind_case_attach_support` only for a named, reviewed project-local artifact and respect stage
@@ -30,6 +32,8 @@ attaching support, or interpreting a tool error.
 Read [scientific-boundaries.md](references/scientific-boundaries.md) before interpreting docking,
 cofolding, validation, or ranking evidence. State uncertainty and unsupported chemistry explicitly.
 Do not turn Vina scores into experimental affinities or model poses into observed binding facts.
+Never promote a screenshot, short-distance count, docking-box check, or manual visual impression
+into a scientific gate; these only help an operator decide what artifact-backed check to inspect.
 
 Do not use shell, generic file tools, subagents, or web/network tools as a workaround. Ask the user
 to place reviewed inputs under the project root or to perform a separately authorized import.
