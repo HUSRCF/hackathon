@@ -169,7 +169,7 @@ ProtBind 后续不应以“功能数量”衡量科研成熟度，而应沿下�
 
 ### P0：数据泄漏与数据集身份 receipt
 
-新增 benchmark-import audit，至少输出：
+分子 split 审计现已由 `protbind benchmark dataset-audit` 实现，输出：
 
 - 原始记录数、canonical parent 数和 exact duplicate 数；
 - train/validation/test 间 canonical identity overlap；
@@ -177,8 +177,16 @@ ProtBind 后续不应以“功能数量”衡量科研成熟度，而应沿下�
 - target sequence identity / cluster；
 - scaffold overlap；
 - reference ligand 是否出现在候选库或训练集合；
-- dataset version、license、URL、下载时间与 SHA-256；
+- dataset version、license、source 与每个 split 的 SHA-256；
 - 审计失败时禁止产生 generalisation claim。
+
+当前实现对 identity、within-split duplicate 和 scaffold 做全量检查；Morgan 相似性超过
+比较预算时只做确定性抽样，并把 absence-of-leakage 结论标记为 `INCOMPLETE`。完整命令、
+规模语义与 positive control 见
+[`PROTBIND_DATASET_LEAKAGE_AUDIT.md`](PROTBIND_DATASET_LEAKAGE_AUDIT.md)。
+蛋白 sequence/pocket、时间、assay 与 label leakage 仍需独立 receipt，不能由分子审计代替。
+下载时间和最终 URL 应来自另一个经过授权的 acquisition receipt；本地 leakage audit 不伪造
+它未观察到的网络时间。
 
 LIT-PCBA 可以作为规模或筛选方法研究来源之一，但在复核 2025 审计问题前，不应把它
 单独作为“无偏泛化”证据。

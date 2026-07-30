@@ -29,6 +29,12 @@ from .benchmark import benchmark_cpu, benchmark_hip, save_benchmark
 from .capabilities import doctor_report
 from .caseio import ingest_case
 from .chemistry import ChemistryCapabilityError, load_chemical_library
+from .dataset_audit import (
+    DatasetAuditConfig,
+    build_dataset_leakage_audit,
+    parse_split_spec,
+    persist_dataset_leakage_audit,
+)
 from .dossier import (
     build_run_dossier,
     dossier_content,
@@ -903,6 +909,7 @@ def _build_parser() -> argparse.ArgumentParser:
             "redock-holdout",
             "redock-holdout-run",
             "redock-regression",
+            "dataset-audit",
             "study-freeze",
             "study-evidence",
         ),
@@ -911,6 +918,7 @@ def _build_parser() -> argparse.ArgumentParser:
             "'redock-holdout' to freeze a result-blind PoseBusters ten-case holdout or "
             "'redock-holdout-run' to execute/resume that exact holdout or "
             "'redock-regression' to evaluate a hash-bound pilot/frozen manifest or "
+            "'dataset-audit' to check molecular split leakage or "
             "'study-freeze'/'study-evidence' for a claim-bound academic evidence packet."
         ),
     )
@@ -1103,6 +1111,39 @@ def _build_parser() -> argparse.ArgumentParser:
         "--markdown",
         type=Path,
         help="Optional reviewer-readable Markdown companion for study-evidence.",
+    )
+    benchmark.add_argument(
+        "--split",
+        dest="dataset_splits",
+        action="append",
+        default=[],
+        metavar="NAME=PATH",
+        help=(
+            "Named molecular split for dataset-audit; repeat for train/validation/test. "
+            "Inputs may be SMI/SMILES/TXT, CSV, SDF, or Parquet."
+        ),
+    )
+    benchmark.add_argument("--dataset-name")
+    benchmark.add_argument("--dataset-version")
+    benchmark.add_argument("--dataset-license")
+    benchmark.add_argument(
+        "--dataset-source",
+        help="Public DOI/URL or local provenance label; no network request is made.",
+    )
+    benchmark.add_argument(
+        "--similarity-threshold",
+        type=float,
+        default=0.8,
+        help="Morgan Tanimoto threshold for analogue-leakage reporting.",
+    )
+    benchmark.add_argument(
+        "--max-similarity-comparisons",
+        type=int,
+        default=1_000_000,
+        help=(
+            "Maximum exact Morgan comparisons per split pair. Larger pairs are sampled "
+            "deterministically and remain scientifically INCOMPLETE."
+        ),
     )
 
     return parser
@@ -1779,6 +1820,63 @@ def _run(args: argparse.Namespace) -> int:
         return 0
 
     if args.command == "benchmark":
+        if args.benchmark_command == "dataset-audit":
+            required_metadata = {
+                "--dataset-name": args.dataset_name,
+                "--dataset-version": args.dataset_version,
+                "--dataset-license": args.dataset_license,
+                "--dataset-source": args.dataset_source,
+            }
+            missing = [
+                option for option, value in required_metadata.items() if not value
+            ]
+            if missing:
+                raise ValueError(
+                    "benchmark dataset-audit requires " + ", ".join(missing)
+                )
+            split_paths: dict[str, Path] = {}
+            for value in args.dataset_splits:
+                name, path = parse_split_spec(value)
+                if name in split_paths:
+                    raise ValueError(f"duplicate dataset split name: {name}")
+                split_paths[name] = path
+            if len(split_paths) < 2:
+                raise ValueError(
+                    "benchmark dataset-audit requires at least two --split NAME=PATH values"
+                )
+            if args.output.exists() and not args.force:
+                raise FileExistsError(
+                    "dataset audit output already exists; use --force only for an "
+                    "intentional regenerated receipt and preserve the prior hash"
+                )
+            result = build_dataset_leakage_audit(
+                split_paths,
+                dataset_name=args.dataset_name,
+                dataset_version=args.dataset_version,
+                dataset_license=args.dataset_license,
+                dataset_source=args.dataset_source,
+                config=DatasetAuditConfig(
+                    similarity_threshold=args.similarity_threshold,
+                    max_similarity_comparisons=args.max_similarity_comparisons,
+                ),
+            )
+            persist_dataset_leakage_audit(result, args.output)
+            print(
+                json.dumps(
+                    {
+                        "schema_version": result["schema_version"],
+                        "kind": result["kind"],
+                        "dataset": result["dataset"],
+                        "split_count": len(result["splits"]),
+                        "gate": result["gate"],
+                        "audit_sha256": result["audit_sha256"],
+                        "output_file_sha256": sha256_file(args.output),
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+            )
+            return 0
         if args.benchmark_command == "study-freeze":
             if args.protocol is None:
                 raise ValueError("benchmark study-freeze requires --protocol")

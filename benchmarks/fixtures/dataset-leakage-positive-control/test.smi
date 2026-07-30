@@ -1,0 +1,4 @@
+# Synthetic CC0 fixture: OCC is ethanol and toluene shares the benzene scaffold.
+OCC test-ethanol-identity-leak
+Cc1ccccc1 test-toluene-scaffold-leak
+N#N test-nitrogen

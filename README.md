@@ -501,6 +501,10 @@ failures，独立 top-1/top-5 均为 9/10，IFP Jaccard mean/median 为 0.6598/0
 McNemar `p=1.0`，所以“v2 统计优于 v1”明确为 `INCONCLUSIVE`，不能由 8/10 → 9/10 的点估计
 直接推出。设计、命令、文献依据与下一轮前瞻验证见
 [`DOCs/PROTBIND_ACADEMIC_EVIDENCE_LAYER.md`](DOCs/PROTBIND_ACADEMIC_EVIDENCE_LAYER.md)。
+分子 benchmark split 可先运行 `benchmark dataset-audit`，全量检查标准化 parent identity、
+within-split duplicate 和 scaffold overlap；Morgan 相似性超出预算时只给出确定性抽样风险提示，
+并阻止 broad-generalisation precondition 通过。命令与 positive control 见
+[`DOCs/PROTBIND_DATASET_LEAKAGE_AUDIT.md`](DOCs/PROTBIND_DATASET_LEAKAGE_AUDIT.md)。
 完整哈希、逐例指标和适用边界见
 [`refine-logs/EXPERIMENT_RESULTS.md`](refine-logs/EXPERIMENT_RESULTS.md)。Vina score 只作为工具分数，
 不得解释为实验结合自由能。

@@ -1,0 +1,4 @@
+# Synthetic CC0 fixture: intentionally overlaps test.smi.
+CCO train-ethanol
+c1ccccc1 train-benzene
+CC(=O)O train-acetic-acid

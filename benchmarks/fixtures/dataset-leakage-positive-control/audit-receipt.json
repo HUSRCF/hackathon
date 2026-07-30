@@ -1,0 +1,148 @@
+{
+  "audit_sha256": "b9402718f0ed92f66401e174f05839368e1efc4c7dc8dc47eacf41336c61cdb4",
+  "config": {
+    "fingerprint": {
+      "bits": 2048,
+      "include_chirality": true,
+      "radius": 2,
+      "type": "Morgan"
+    },
+    "large_pair_policy": "deterministic SHA-256 sampling; partial similarity audits remain INCOMPLETE and cannot pass broad-generalisation preconditions",
+    "max_similarity_comparisons_per_split_pair": 1000000,
+    "sampling_namespace": "protbind-dataset-audit-v1",
+    "similarity_threshold": 0.8
+  },
+  "dataset": {
+    "license": "CC0-1.0",
+    "name": "ProtBind synthetic leakage positive control",
+    "source": "synthetic:protbind-positive-control",
+    "version": "1"
+  },
+  "gate": {
+    "analogue_novelty": {
+      "blockers": [],
+      "status": "PASS"
+    },
+    "broad_generalisation_precondition": {
+      "blockers": [
+        "identity_novelty:test<->train:parent_identity_overlap=1",
+        "scaffold_novelty:test<->train:scaffold_overlap=2"
+      ],
+      "status": "FAIL"
+    },
+    "identity_novelty": {
+      "blockers": [
+        "test<->train:parent_identity_overlap=1"
+      ],
+      "status": "FAIL"
+    },
+    "parsing_complete": {
+      "blockers": [],
+      "status": "PASS"
+    },
+    "scaffold_novelty": {
+      "blockers": [
+        "test<->train:scaffold_overlap=2"
+      ],
+      "status": "FAIL"
+    },
+    "scientific_semantics": "PASS is only a dataset-integrity precondition. It does not demonstrate model accuracy, enrichment, affinity, biological activity, or external generalisation.",
+    "within_split_identity_uniqueness": {
+      "blockers": [],
+      "status": "PASS"
+    }
+  },
+  "implementation": {
+    "module": "protbind_agent.dataset_audit",
+    "rdkit_version": "2025.09.3",
+    "source_sha256": "ac6a2bf843d89bfeb3eeecc4b494ef05e04d64bb838be35289592e0fce25b163"
+  },
+  "kind": "PROTBIND_DATASET_LEAKAGE_AUDIT",
+  "pairwise": [
+    {
+      "connectivity_identity_overlap_unique_count": 1,
+      "exact_parent_identity_overlap": {
+        "fraction_of_smaller_unique_split": 0.3333333333333333,
+        "identity_hash_examples": [
+          "sha256:ab1de819ede91df490e6441934decfa9041b49f91d6bbadbba4df634ccff57fa"
+        ],
+        "unique_count": 1
+      },
+      "left_split": "test",
+      "morgan_similarity": {
+        "at_or_above_threshold_pair_count": 1,
+        "executed_comparison_count": 9,
+        "full_cartesian_comparison_count": 9,
+        "maximum": 1.0,
+        "maximum_nonidentical": 0.2727272727272727,
+        "nonidentical_at_or_above_threshold_pair_count": 0,
+        "sampled_unique_parent_counts": {
+          "test": 3,
+          "train": 3
+        },
+        "semantics": "Counts are exact only when status=FULL. A partial deterministic sample can reveal leakage but cannot establish its absence.",
+        "status": "FULL",
+        "threshold": 0.8
+      },
+      "right_split": "train",
+      "scaffold_overlap": {
+        "fraction_of_smaller_scaffold_set": 0.6666666666666666,
+        "scaffold_hash_examples": [
+          "sha256:af2ebc6208478074f7d0848c246ed518ea119589369ebc9549b18780f3d8ff86",
+          "sha256:13cad05ca8f49c509e5b7be8c67668484344ebf2b2d12b03b295f14d4b1c32d1"
+        ],
+        "unique_count": 2
+      },
+      "stereo_identity_overlap_unique_count": 1
+    }
+  ],
+  "privacy": {
+    "overlap_examples": "SHA-256 commitments of canonical identities/scaffolds",
+    "raw_smiles_in_receipt": false,
+    "record_ids_in_receipt": false
+  },
+  "schema_version": "1.0",
+  "scientific_boundaries": [
+    "This receipt audits molecular split integrity; it does not measure docking or screening performance.",
+    "Identity standardization uses RDKit FragmentParent, ChargeParent, and TautomerParent and may not match every dataset's published identity policy.",
+    "Scaffold disjointness is a strict precondition for scaffold-novelty claims, not a universal requirement for every assay question.",
+    "PARTIAL_DETERMINISTIC_SAMPLE similarity results can find leakage but cannot establish the absence of analog leakage.",
+    "Protein sequence, pocket, temporal, assay, and label leakage require separate audits and are NOT_EVALUATED here."
+  ],
+  "splits": {
+    "test": {
+      "duplicate_parent_record_count": 0,
+      "input": {
+        "file_sha256": "1bff24db8aa594e4af5a291104cc4e1f8d3345c91b9478b95edc9e9e542fcabf",
+        "filename": "test.smi",
+        "size_bytes": 167,
+        "split": "test"
+      },
+      "invalid_record_count": 0,
+      "invalid_record_examples": [],
+      "parsed_record_count": 3,
+      "record_count": 3,
+      "unique_connectivity_identity_count": 3,
+      "unique_parent_identity_count": 3,
+      "unique_scaffold_count": 3,
+      "unique_stereo_identity_count": 3
+    },
+    "train": {
+      "duplicate_parent_record_count": 0,
+      "input": {
+        "file_sha256": "788d1ba678e5c3d9239408427b63ddaa412d3741d56f64c97226ae321b9cf47b",
+        "filename": "train.smi",
+        "size_bytes": 125,
+        "split": "train"
+      },
+      "invalid_record_count": 0,
+      "invalid_record_examples": [],
+      "parsed_record_count": 3,
+      "record_count": 3,
+      "unique_connectivity_identity_count": 3,
+      "unique_parent_identity_count": 3,
+      "unique_scaffold_count": 3,
+      "unique_stereo_identity_count": 3
+    }
+  }
+}
