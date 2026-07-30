@@ -100,6 +100,19 @@ def test_mcp_cli_accepts_private_library_config_without_arbitrary_roots() -> Non
     assert arguments.library_config == Path(".protbind/library.json")
 
 
+def test_mcp_cli_accepts_only_operator_configured_knowledge_model() -> None:
+    arguments = _build_parser().parse_args(
+        (
+            "mcp",
+            "serve",
+            "--knowledge-model",
+            ".protbind/models/bge-m3",
+        )
+    )
+
+    assert arguments.knowledge_model == Path(".protbind/models/bge-m3")
+
+
 def test_library_cli_requires_explicit_data_access_confirmation() -> None:
     parser = _build_parser()
     with pytest.raises(SystemExit):
@@ -110,6 +123,51 @@ def test_library_cli_requires_explicit_data_access_confirmation() -> None:
     )
     assert arguments.library_command == "status"
     assert arguments.confirm_data_access is True
+
+
+def test_library_rag_cli_is_consent_gated_and_scoped() -> None:
+    parser = _build_parser()
+    with pytest.raises(SystemExit):
+        parser.parse_args(
+            (
+                "library",
+                "rag-search",
+                "verified kinase",
+                "--embedding-model",
+                "models/bge",
+            )
+        )
+
+    arguments = parser.parse_args(
+        (
+            "library",
+            "rag-search",
+            "verified kinase",
+            "--embedding-model",
+            "models/bge",
+            "--confirm-data-access",
+        )
+    )
+    assert arguments.kind == "protein"
+    assert arguments.embedding_model == Path("models/bge")
+
+
+def test_knowledge_pdf_cli_exposes_explicit_ocr_policy() -> None:
+    arguments = _build_parser().parse_args(
+        (
+            "knowledge",
+            "inspect",
+            "paper.pdf",
+            "--pdf-backend",
+            "pdftotext",
+            "--ocr",
+            "required",
+            "--confirm-data-access",
+        )
+    )
+
+    assert arguments.pdf_backend == "pdftotext"
+    assert arguments.ocr == "required"
 
 
 def test_p2rank_parse_requires_version_provenance() -> None:

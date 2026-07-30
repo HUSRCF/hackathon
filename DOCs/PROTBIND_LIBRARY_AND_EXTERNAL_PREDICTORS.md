@@ -65,13 +65,39 @@ protbind library verify-uniprot <protein-entry-id> \
 输出区分 `EXACT_SEQUENCE`、`CONSISTENT_VARIANT`、`PARTIAL_COORDINATE_MATCH` 和 `CONFLICT`。
 这些只描述观察序列与 accession FASTA 的一致性，不证明坐标、assembly、配体或结合真实性。
 
-## 3. OpenCode/Codex Agent
+## 3. 蛋白库混合 RAG
+
+库的 `catalog.sqlite` 仍是精确状态源；RAG 是可丢弃、可重建的 seekdb 投影：
+
+```bash
+protbind library rag-sync \
+  --kind protein \
+  --embedding-model /reviewed/local/bge-m3 \
+  --confirm-data-access
+
+protbind library rag-search "已做 UniProt 精确验证、少于 500 aa、无金属的条目" \
+  --kind protein \
+  --embedding-model /reviewed/local/bge-m3 \
+  --confirm-data-access
+```
+
+投影只含 entry ID、状态、已核验 accession、格式、链/残基/缺失项计数和 workflow blocker；不含
+文件名、绝对路径、序列、SMILES、分子字节或坐标。返回结果必须引用 snapshot artifact 与 entry
+ID，再重新读取 catalog 条目并进入常规 QC/case gate；向量相似度不能证明身份、结构质量、结合或
+活性。全文与向量两支都在 seekdb 查询内应用 `protein-library` scope，不做检索后的客户端过滤。
+
+生产默认仍是 BGE-M3（1024 维、多语言且现有 AIAA/FlagEmbedding adapter 已接）。可选
+`Qwen/Qwen3-Embedding-0.6B`，不是 0.8B；它必须有本地文件逐项 SHA-256 manifest，默认 CPU，
+当前 AIAA 的 Transformers 4.48.1 低于本项目门禁 4.51.0，因此 `knowledge model-doctor` 会报告
+`BLOCKED_RUNTIME_COMPATIBILITY`，不会自动升级 Torch/Transformers 或下载权重。
+
+## 4. OpenCode/Codex Agent
 
 默认 `opencode.json` 将 `.protbind/library.json` 交给本地 stdio MCP。配置不存在时 MCP 仍可启动，
 但 library status 会要求操作者先运行 init。Agent 不接受任意路径，只能访问预配置的两个库及各自
 `incoming/`。
 
-六个 library MCP 工具在 OpenCode 权限层全部是 `ask`。此外每次调用都要求
+八个 library MCP 工具（含 RAG sync/search）在 OpenCode 权限层全部是 `ask`。此外每次调用都要求
 `data_access_confirmed=true`；`$protbind-library` skill 要求 Agent 先说明本次将读取、哈希、复制、
 删除或联网的内容，再取得一次新的用户确认。一次确认不得复用到下一次调用。
 
@@ -79,7 +105,7 @@ protbind library verify-uniprot <protein-entry-id> \
 NOPASSWD。若选定目录由管理员控制，操作者应在 Agent 外用最小范围的管理员动作创建目录并授予当前
 用户；未来若提供 polkit helper，也只能白名单创建库根、探测文件系统与移动已验证导入等固定动作。
 
-## 4. P2Rank
+## 5. P2Rank
 
 `protbind doctor` 检测本地 `prank`。CLI 可运行 P2Rank 或解析已有官方 predictions CSV：
 
@@ -105,7 +131,7 @@ predictions SHA-256；直接运行要求稳定版 2.5，解析外部 CSV 时必�
 fpocket/P2Rank 共识自动调度；进入正式 ligand-only 流程前仍须实现共识、box 构造、受体坐标框架
 检查和正常 docking 门禁。
 
-## 5. DrutAI
+## 6. DrutAI
 
 DrutAI 当前不进入候选淘汰和科学证据。`protbind doctor` 返回
 `BLOCKED_PENDING_BAKEOFF`，原因包括：

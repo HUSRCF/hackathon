@@ -171,5 +171,33 @@ def test_mcp_server_exposes_only_bounded_domain_tools(tmp_path) -> None:
         "library_plan_import",
         "library_apply_import",
         "library_verify_uniprot",
+        "knowledge_document_inspect",
+        "knowledge_import",
+        "knowledge_search",
+        "library_rag_sync",
+        "library_rag_search",
+        "knowledge_model_status",
     }
     assert not tool_names & {"bash", "shell", "read_file", "write_file", "fetch", "network"}
+
+
+def test_mcp_document_inspection_requires_fresh_data_confirmation(tmp_path) -> None:
+    document = tmp_path / "paper.md"
+    document.write_text("# Result\nEvidence.\n", encoding="utf-8")
+    service = ProtBindMCPService(
+        workspace=tmp_path / "workspace",
+        project_root=tmp_path,
+    )
+
+    with pytest.raises(PermissionError, match="fresh explicit user confirmation"):
+        service.knowledge_document_inspect(
+            project_path="paper.md",
+            data_access_confirmed=False,
+        )
+
+    result = service.knowledge_document_inspect(
+        project_path="paper.md",
+        data_access_confirmed=True,
+    )
+    assert result["chunk_count"] == 1
+    assert result["text_returned"] is False

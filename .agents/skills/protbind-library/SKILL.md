@@ -50,6 +50,19 @@ Never perform remote similarity search or sequence upload. `EXACT_SEQUENCE` auth
 the compared observed sequence. It does not authenticate the coordinate model, assembly,
 ligand, biological activity, or docking suitability.
 
+## Library RAG
+
+`protbind_library_rag_sync` and `protbind_library_rag_search` are private-library reads, so the
+fresh consent gate applies to every call. Sync creates a derived seekdb projection containing
+entry IDs, catalog/QC states, accession when already verified, bounded counts, and workflow
+blockers. It excludes filenames, paths, sequences, SMILES, molecule bytes, and coordinates.
+
+Treat search results only as candidate discovery. Cite both the projection artifact ID and entry
+ID, then call `protbind_library_show` with a new confirmation and re-run normal case gates before
+using an entry. `catalog.sqlite` remains the exact state source; the vector/full-text index may be
+stale and never overrides it. Do not answer binding, activity, identity, or structure-quality
+questions from embedding similarity.
+
 ## Scientific and security boundaries
 
 - Do not call parsed files “true”, “validated”, “binding”, or “active”.

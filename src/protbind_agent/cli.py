@@ -30,7 +30,15 @@ from .external_predictors import (
     run_p2rank,
     write_p2rank_bundle,
 )
-from .knowledge import KnowledgeCapabilityError, SeekDBKnowledgeStore, import_document
+from .knowledge import (
+    KnowledgeCapabilityError,
+    SeekDBKnowledgeStore,
+    extract_document_bytes,
+    freeze_embedding_model_manifest,
+    import_document,
+    inspect_embedding_model,
+    sync_library_rag,
+)
 from .library import (
     ImportState,
     LibraryManager,
@@ -440,6 +448,45 @@ def _build_parser() -> argparse.ArgumentParser:
     _workspace_argument(library_verify)
     _data_access_confirmation(library_verify)
 
+    library_rag_sync = library_commands.add_parser(
+        "rag-sync",
+        help="Build a path/sequence/coordinate-free seekdb projection of a library.",
+    )
+    library_rag_sync.add_argument(
+        "--kind", choices=("protein", "ligand"), default="protein"
+    )
+    library_rag_sync.add_argument(
+        "--embedding-model",
+        "--bge-model",
+        dest="embedding_model",
+        type=Path,
+        required=True,
+    )
+    library_rag_sync.add_argument("--include-quarantined", action="store_true")
+    _library_config_argument(library_rag_sync)
+    _workspace_argument(library_rag_sync)
+    _data_access_confirmation(library_rag_sync)
+
+    library_rag_search = library_commands.add_parser(
+        "rag-search",
+        help="Retrieve candidate catalog entries from the derived library projection.",
+    )
+    library_rag_search.add_argument("question")
+    library_rag_search.add_argument(
+        "--kind", choices=("protein", "ligand"), default="protein"
+    )
+    library_rag_search.add_argument(
+        "--embedding-model",
+        "--bge-model",
+        dest="embedding_model",
+        type=Path,
+        required=True,
+    )
+    library_rag_search.add_argument("--top-k", type=int, default=5)
+    _library_config_argument(library_rag_search)
+    _workspace_argument(library_rag_search)
+    _data_access_confirmation(library_rag_search)
+
     site = commands.add_parser(
         "site",
         help="Run or parse prospective binding-site predictors without claiming truth.",
@@ -596,11 +643,55 @@ def _build_parser() -> argparse.ArgumentParser:
 
     knowledge = commands.add_parser("knowledge", help="Manage seekdb-backed evidence.")
     knowledge_commands = knowledge.add_subparsers(dest="knowledge_command", required=True)
+    knowledge_inspect = knowledge_commands.add_parser(
+        "inspect",
+        help="Inspect local PDF/Markdown extraction and OCR readiness without indexing.",
+    )
+    knowledge_inspect.add_argument("document", type=Path)
+    knowledge_inspect.add_argument(
+        "--pdf-backend", choices=("auto", "pymupdf", "pdftotext"), default="auto"
+    )
+    knowledge_inspect.add_argument(
+        "--ocr", choices=("off", "auto", "required"), default="off"
+    )
+    knowledge_inspect.add_argument("--ocr-language", default="eng")
+    _data_access_confirmation(knowledge_inspect)
     knowledge_import = knowledge_commands.add_parser("import", help="Import local PDF/Markdown.")
     knowledge_import.add_argument("document", type=Path)
-    knowledge_import.add_argument("--bge-model", type=Path, required=True)
+    knowledge_import.add_argument(
+        "--embedding-model",
+        "--bge-model",
+        dest="embedding_model",
+        type=Path,
+        required=True,
+    )
+    knowledge_import.add_argument(
+        "--pdf-backend", choices=("auto", "pymupdf", "pdftotext"), default="auto"
+    )
+    knowledge_import.add_argument(
+        "--ocr", choices=("off", "auto", "required"), default="off"
+    )
+    knowledge_import.add_argument("--ocr-language", default="eng")
     knowledge_import.add_argument("--license")
     _workspace_argument(knowledge_import)
+    _data_access_confirmation(knowledge_import)
+    knowledge_model = knowledge_commands.add_parser(
+        "model-doctor",
+        help="Check a hash-pinned BGE-M3 or Qwen3-Embedding-0.6B local model.",
+    )
+    knowledge_model.add_argument("--embedding-model", type=Path)
+    knowledge_freeze = knowledge_commands.add_parser(
+        "model-freeze",
+        help="Generate a local model file-hash manifest without loading or downloading it.",
+    )
+    knowledge_freeze.add_argument("--embedding-model", type=Path, required=True)
+    knowledge_freeze.add_argument(
+        "--model-name",
+        choices=("BAAI/bge-m3", "Qwen/Qwen3-Embedding-0.6B"),
+        required=True,
+    )
+    knowledge_freeze.add_argument("--model-revision", required=True)
+    knowledge_freeze.add_argument("--replace", action="store_true")
     knowledge_fetch = knowledge_commands.add_parser(
         "fetch", help="Fetch one explicitly approved HTTPS resource into artifacts."
     )
@@ -613,9 +704,19 @@ def _build_parser() -> argparse.ArgumentParser:
 
     ask = commands.add_parser("ask", help="Retrieve cited local seekdb evidence.")
     ask.add_argument("question")
-    ask.add_argument("--bge-model", type=Path, required=True)
+    ask.add_argument(
+        "--embedding-model",
+        "--bge-model",
+        dest="embedding_model",
+        type=Path,
+        required=True,
+    )
     ask.add_argument("--top-k", type=int, default=5)
+    ask.add_argument(
+        "--scope", choices=("evidence", "protein-library", "ligand-library")
+    )
     _workspace_argument(ask)
+    _data_access_confirmation(ask)
 
     serve = commands.add_parser("serve", help="Serve the private six-page web UI.")
     serve.add_argument("--host", default="127.0.0.1")
@@ -652,6 +753,11 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     mcp_serve.add_argument("--worker-config", type=Path)
+    mcp_serve.add_argument(
+        "--knowledge-model",
+        type=Path,
+        help="Optional operator-selected, hash-pinned local embedding model.",
+    )
     _workspace_argument(mcp_serve)
 
     benchmark = commands.add_parser(
@@ -1043,6 +1149,30 @@ def _run(args: argparse.Namespace) -> int:
                 )
             elif args.library_command == "show":
                 result = manager.show_entry(args.kind, args.entry_id)
+            elif args.library_command == "rag-sync":
+                result = sync_library_rag(
+                    args.workspace,
+                    manager,
+                    args.embedding_model,
+                    kind=args.kind,
+                    include_quarantined=args.include_quarantined,
+                )
+            elif args.library_command == "rag-search":
+                hits = SeekDBKnowledgeStore(
+                    args.workspace, args.embedding_model
+                ).search(
+                    args.question,
+                    top_k=args.top_k,
+                    scope=f"{args.kind}-library",
+                )
+                result = {
+                    "question": args.question,
+                    "scope": f"{args.kind}-library",
+                    "answer_mode": (
+                        "retrieval-only; verify selected entries against catalog.sqlite"
+                    ),
+                    "evidence": hits,
+                }
             elif args.library_command == "verify-uniprot":
                 fetcher = PublicDataFetcher(args.workspace)
                 fetch = fetcher.fetch(
@@ -1294,16 +1424,66 @@ def _run(args: argparse.Namespace) -> int:
         return _manifest_exit(manifest)
 
     if args.command == "knowledge":
-        if args.knowledge_command == "import":
-            artifact, chunks = import_document(
-                args.workspace,
-                args.document,
-                args.bge_model,
-                license=args.license,
+        if args.knowledge_command == "inspect":
+            extraction = extract_document_bytes(
+                args.document.read_bytes(),
+                suffix=args.document.suffix,
+                pdf_backend=args.pdf_backend,
+                ocr=args.ocr,
+                ocr_language=args.ocr_language,
             )
             print(
                 json.dumps(
-                    {"artifact_id": artifact.artifact_id, "chunks_indexed": chunks},
+                    {
+                        **extraction.receipt,
+                        "source_name": args.document.name,
+                        "text_returned": False,
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+            )
+            return 0
+        if args.knowledge_command == "model-doctor":
+            print(
+                json.dumps(
+                    inspect_embedding_model(args.embedding_model),
+                    ensure_ascii=False,
+                    indent=2,
+                )
+            )
+            return 0
+        if args.knowledge_command == "model-freeze":
+            print(
+                json.dumps(
+                    freeze_embedding_model_manifest(
+                        args.embedding_model,
+                        model_name=args.model_name,
+                        model_revision=args.model_revision,
+                        replace=args.replace,
+                    ),
+                    ensure_ascii=False,
+                    indent=2,
+                )
+            )
+            return 0
+        if args.knowledge_command == "import":
+            artifact, chunks, receipt = import_document(
+                args.workspace,
+                args.document,
+                args.embedding_model,
+                license=args.license,
+                pdf_backend=args.pdf_backend,
+                ocr=args.ocr,
+                ocr_language=args.ocr_language,
+            )
+            print(
+                json.dumps(
+                    {
+                        "artifact_id": artifact.artifact_id,
+                        "chunks_indexed": chunks,
+                        "extraction_receipt_artifact_id": receipt.artifact_id,
+                    },
                     ensure_ascii=False,
                     indent=2,
                 )
@@ -1315,8 +1495,8 @@ def _run(args: argparse.Namespace) -> int:
         raise AssertionError("unhandled knowledge command")
 
     if args.command == "ask":
-        hits = SeekDBKnowledgeStore(args.workspace, args.bge_model).search(
-            args.question, top_k=args.top_k
+        hits = SeekDBKnowledgeStore(args.workspace, args.embedding_model).search(
+            args.question, top_k=args.top_k, scope=args.scope
         )
         print(
             json.dumps(
@@ -1351,6 +1531,7 @@ def _run(args: argparse.Namespace) -> int:
             project_root=args.project_root,
             config=_worker_config(args.worker_config),
             library_config=args.library_config,
+            knowledge_model=args.knowledge_model,
             transport=args.transport,
         )
         return 0

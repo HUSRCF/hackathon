@@ -18,6 +18,13 @@ from .dossier import (
     dossier_content,
     persist_run_dossier,
 )
+from .knowledge import (
+    SeekDBKnowledgeStore,
+    extract_document_bytes,
+    import_document,
+    inspect_embedding_model,
+    sync_library_rag,
+)
 from .library import LibraryManager, load_library_config
 from .models import ArtifactRef
 from .pose_view import build_pose_scene_summary
@@ -47,6 +54,7 @@ class ProtBindMCPService:
         project_root: Path,
         config: PipelineConfig | None = None,
         library_config: Path | None = None,
+        knowledge_model: Path | None = None,
     ) -> None:
         self.workspace = workspace.resolve()
         self.project_root = project_root.resolve()
@@ -57,12 +65,15 @@ class ProtBindMCPService:
             if library_config is not None and library_config.is_file()
             else None
         )
+        self.knowledge_model = (
+            knowledge_model.resolve() if knowledge_model is not None else None
+        )
 
     @staticmethod
     def _require_data_access_confirmation(data_access_confirmed: bool) -> None:
         if data_access_confirmed is not True:
             raise PermissionError(
-                "private library access requires a fresh explicit user confirmation"
+                "private data access requires a fresh explicit user confirmation"
             )
 
     def _library(self, data_access_confirmed: bool) -> LibraryManager:
@@ -73,6 +84,15 @@ class ProtBindMCPService:
                 "server with --library-config"
             )
         return self.library
+
+    def _knowledge_store(self, data_access_confirmed: bool) -> SeekDBKnowledgeStore:
+        self._require_data_access_confirmation(data_access_confirmed)
+        if self.knowledge_model is None:
+            raise RuntimeError(
+                "knowledge retrieval is not configured; an operator must start the MCP "
+                "server with --knowledge-model"
+            )
+        return SeekDBKnowledgeStore(self.workspace, self.knowledge_model)
 
     def _project_file(self, value: str, name: str) -> Path:
         if not isinstance(value, str) or not value.strip():
@@ -433,6 +453,134 @@ class ProtBindMCPService:
         verification["network_receipt"] = result.receipt.to_dict()
         return verification
 
+    def knowledge_document_inspect(
+        self,
+        *,
+        project_path: str,
+        data_access_confirmed: bool,
+        pdf_backend: str = "auto",
+        ocr: str = "off",
+        ocr_language: str = "eng",
+    ) -> dict[str, Any]:
+        """Inspect extraction readiness for one project-local document without returning text."""
+
+        self._require_data_access_confirmation(data_access_confirmed)
+        path = self._project_file(project_path, "project_path")
+        extraction = extract_document_bytes(
+            path.read_bytes(),
+            suffix=path.suffix,
+            pdf_backend=pdf_backend,
+            ocr=ocr,
+            ocr_language=ocr_language,
+        )
+        return {
+            **extraction.receipt,
+            "source_name": path.name,
+            "text_returned": False,
+        }
+
+    def knowledge_import(
+        self,
+        *,
+        project_path: str,
+        data_access_confirmed: bool,
+        license: str | None = None,
+        pdf_backend: str = "auto",
+        ocr: str = "off",
+        ocr_language: str = "eng",
+    ) -> dict[str, Any]:
+        """Import one project-local document into the configured cited evidence index."""
+
+        self._require_data_access_confirmation(data_access_confirmed)
+        if self.knowledge_model is None:
+            raise RuntimeError(
+                "knowledge retrieval is not configured; start MCP with --knowledge-model"
+            )
+        path = self._project_file(project_path, "project_path")
+        artifact, count, receipt = import_document(
+            self.workspace,
+            path,
+            self.knowledge_model,
+            license=license,
+            pdf_backend=pdf_backend,
+            ocr=ocr,
+            ocr_language=ocr_language,
+        )
+        return {
+            "artifact_id": artifact.artifact_id,
+            "chunks_indexed": count,
+            "extraction_receipt_artifact_id": receipt.artifact_id,
+            "source_name": path.name,
+        }
+
+    def knowledge_search(
+        self,
+        *,
+        query: str,
+        data_access_confirmed: bool,
+        scope: str | None = "evidence",
+        top_k: int = 5,
+    ) -> dict[str, Any]:
+        """Return cited local retrieval results; this tool performs no answer synthesis."""
+
+        if scope not in {None, "evidence", "protein-library", "ligand-library"}:
+            raise ValueError("unsupported knowledge scope")
+        hits = self._knowledge_store(data_access_confirmed).search(
+            query,
+            top_k=top_k,
+            scope=scope,
+        )
+        return {
+            "query": query,
+            "scope": scope,
+            "answer_mode": "retrieval-only; citations and scientific gates remain required",
+            "evidence": hits,
+        }
+
+    def library_rag_sync(
+        self,
+        *,
+        kind: str,
+        data_access_confirmed: bool,
+        include_quarantined: bool = False,
+    ) -> dict[str, Any]:
+        """Rebuild a sanitized catalog projection after fresh private-data consent."""
+
+        manager = self._library(data_access_confirmed)
+        if self.knowledge_model is None:
+            raise RuntimeError(
+                "knowledge retrieval is not configured; start MCP with --knowledge-model"
+            )
+        return sync_library_rag(
+            self.workspace,
+            manager,
+            self.knowledge_model,
+            kind=kind,
+            include_quarantined=include_quarantined,
+        )
+
+    def library_rag_search(
+        self,
+        *,
+        query: str,
+        kind: str,
+        data_access_confirmed: bool,
+        top_k: int = 5,
+    ) -> dict[str, Any]:
+        """Retrieve sanitized library candidates, never raw sequences or coordinates."""
+
+        return self.knowledge_search(
+            query=query,
+            data_access_confirmed=data_access_confirmed,
+            scope=f"{kind}-library",
+            top_k=top_k,
+        )
+
+    def knowledge_model_status(self) -> dict[str, Any]:
+        """Return path-free offline model admission evidence."""
+
+        return inspect_embedding_model(self.knowledge_model)
+
 
 def create_mcp_server(service: ProtBindMCPService) -> Any:
     try:
@@ -481,6 +629,24 @@ def create_mcp_server(service: ProtBindMCPService) -> Any:
     )
     server.tool(name="library_verify_uniprot", structured_output=True)(
         service.library_verify_uniprot
+    )
+    server.tool(name="knowledge_document_inspect", structured_output=True)(
+        service.knowledge_document_inspect
+    )
+    server.tool(name="knowledge_import", structured_output=True)(
+        service.knowledge_import
+    )
+    server.tool(name="knowledge_search", structured_output=True)(
+        service.knowledge_search
+    )
+    server.tool(name="library_rag_sync", structured_output=True)(
+        service.library_rag_sync
+    )
+    server.tool(name="library_rag_search", structured_output=True)(
+        service.library_rag_search
+    )
+    server.tool(name="knowledge_model_status", structured_output=True)(
+        service.knowledge_model_status
     )
 
     @server.resource(
@@ -603,6 +769,7 @@ def serve_mcp(
     project_root: Path,
     config: PipelineConfig | None = None,
     library_config: Path | None = None,
+    knowledge_model: Path | None = None,
     transport: str = "stdio",
 ) -> None:
     if transport != "stdio":
@@ -618,6 +785,7 @@ def serve_mcp(
         project_root=project_root,
         config=config,
         library_config=library_config,
+        knowledge_model=knowledge_model,
     )
     server = create_mcp_server(service)
 

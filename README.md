@@ -178,7 +178,8 @@ protbind case advance <run-id> --continuation-token <fresh-token>
 # OpenCode 通过本地 stdio 启动同一受限 MCP 服务
 scripts/aiaa-protbind.sh -m protbind_agent mcp serve \
   --workspace artifacts/protbind --project-root . \
-  --library-config .protbind/library.json
+  --library-config .protbind/library.json \
+  --knowledge-model .protbind/models/bge-m3
 ```
 
 门禁决策为 `READY | NEEDS_ACTION | RETRYABLE | UNSUPPORTED | FAILED | COMPLETE`；postflight 另有
@@ -188,19 +189,27 @@ fail closed。每个 run 的 `control.json` 只保存内容寻址 gate/acceptanc
 
 仓库根目录的 [`opencode.json`](opencode.json) 只启用回环 HipFire provider 和 `protbind` stdio
 MCP，默认拒绝所有工具；case 只读状态/报告可直接调用，创建、附件和单阶段推进均要求交互批准；
-私有 protein/ligand library 连读取也始终为 `ask`，且工具参数还要求一次新的显式确认。项目 skills
+私有 PDF、protein/ligand library 连读取也始终为 `ask`，且工具参数还要求一次新的显式确认。项目 skills
 位于 [`.agents/skills/protbind-research/SKILL.md`](.agents/skills/protbind-research/SKILL.md)
 和 [`.agents/skills/protbind-library/SKILL.md`](.agents/skills/protbind-library/SKILL.md)，
 OpenCode 可原生发现。完整 CLI、迁移/验证状态、P2Rank 与 DrutAI 门禁见
 [私有数据仓库与外部预测器说明](DOCs/PROTBIND_LIBRARY_AND_EXTERNAL_PREDICTORS.md)。
+PDF/OCR 门禁、引用语义和蛋白库 RAG 模型选择见
+[PDF 与蛋白库 RAG 说明](DOCs/PROTBIND_PDF_AND_LIBRARY_RAG.md)。
 配置未写入不存在的 production worker digest；因此默认会诚实运行到能力门并
 停住，生产时须由操作者在 MCP command 中加入已审核的
-`--worker-config configs/protbind-workers.toml`。当前精确白名单的 17 个受限工具已完成 MCP 1.14
+`--worker-config configs/protbind-workers.toml`。当前精确白名单的 23 个受限工具已完成 MCP 1.14
 stdio 真实 initialize/list-tools 握手与权限回归。普通 public-data fetch 与 accession-only
 UniProt 验证是仅有的受控网络表面，
 只接受白名单 source/公开 ID/精确域名批准；`case_dossier` 与 `case_pose_view` 仍为只读、无坐标工具。本机 OpenCode 1.18.8
 已完成 DeepSeek V4 Flash 的无工具云端传输冒烟测试。HipFire TUI 端到端对话仍须在本地模型服务
 启动后单独验收。
+
+OpenCode 1.18.8 本身没有列出 PDF 文字提取或 OCR 内建工具；ProtBind 因而没有开放通用 bash，
+而是提供受限的 `knowledge_document_inspect/import/search`。PDF 逐页先比较 PyMuPDF 与本机
+`pdftotext -layout`，标出低文字量扫描页；OCR 可设 `off|auto|required`，缺 Tesseract 时
+`required` 会 fail closed。每次导入生成含工具版本、逐页 backend、未解析页和页码引用策略的
+内容寻址回执。
 
 ### 运行 dossier 与本地姿态查看器
 

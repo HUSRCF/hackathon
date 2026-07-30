@@ -394,6 +394,88 @@ class LibraryManager:
         row = self._entry(kind, entry_id)
         return _public_entry(row)
 
+    def rag_projection(
+        self,
+        kind: str = "protein",
+        *,
+        include_quarantined: bool = False,
+        limit: int = 10_000,
+    ) -> dict[str, Any]:
+        """Build a path/sequence/coordinate-free projection for a derived RAG index."""
+
+        _validate_kind(kind)
+        if limit < 1 or limit > 100_000:
+            raise ValueError("limit must be between 1 and 100000")
+        query = "SELECT * FROM entries"
+        parameters: tuple[Any, ...] = ()
+        if not include_quarantined:
+            query += " WHERE state != ?"
+            parameters = (ImportState.QUARANTINED.value,)
+        query += " ORDER BY created_at, entry_id LIMIT ?"
+        parameters += (limit,)
+        with _connect(self.config.root(kind)) as connection:
+            rows = connection.execute(query, parameters).fetchall()
+        records: list[dict[str, Any]] = []
+        for row in rows:
+            qc = json.loads(row["qc_json"])
+            verification = json.loads(row["verification_json"])
+            record: dict[str, Any] = {
+                "entry_id": row["entry_id"],
+                "kind": row["kind"],
+                "state": row["state"],
+                "verification_state": row["verification_state"],
+                "accession": verification.get("accession"),
+                "format": qc.get("format"),
+                "parse_valid": bool(qc.get("parse_valid", False)),
+                "workflow_v1_compatible": qc.get("workflow_v1_compatible"),
+                "workflow_v1_blockers": list(qc.get("workflow_v1_blockers", [])),
+            }
+            if kind == "protein":
+                record.update(
+                    {
+                        "coordinate_model_present": qc.get(
+                            "coordinate_model_present",
+                            qc.get("format") in {"pdb", "mmcif"},
+                        ),
+                        "chain_count": qc.get("chain_count", qc.get("sequence_count")),
+                        "residue_count": qc.get(
+                            "residue_count",
+                            sum(qc.get("sequence_lengths", [])),
+                        ),
+                        "sequence_lengths": list(qc.get("sequence_lengths", [])),
+                        "metal_element_count": len(qc.get("metal_elements", [])),
+                        "nonstandard_residue_type_count": len(
+                            qc.get("nonstandard_residues", [])
+                        ),
+                        "missing_backbone_residue_count": len(
+                            qc.get("missing_backbone_residues", [])
+                        ),
+                    }
+                )
+            else:
+                record.update(
+                    {
+                        "record_count": qc.get("record_count"),
+                        "maximum_heavy_atom_count": qc.get(
+                            "maximum_heavy_atom_count"
+                        ),
+                    }
+                )
+            records.append(record)
+        return {
+            "schema_version": LIBRARY_SCHEMA_VERSION,
+            "kind": kind,
+            "library_root_id": _root_id(self.config.root(kind)),
+            "records": records,
+            "record_count": len(records),
+            "projection_policy": (
+                "Derived retrieval projection only; catalog.sqlite remains authoritative. "
+                "No filenames, paths, sequences, SMILES, molecule bytes, or coordinates."
+            ),
+            "absolute_paths_disclosed": False,
+            "private_values_disclosed": False,
+        }
+
     def protein_sequences(self, entry_id: str) -> tuple[str, ...]:
         row = self._entry("protein", entry_id)
         qc = json.loads(row["qc_json"])

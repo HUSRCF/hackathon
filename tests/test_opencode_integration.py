@@ -40,8 +40,14 @@ def test_opencode_configuration_is_local_and_default_deny() -> None:
         "protbind_library_plan_import",
         "protbind_library_apply_import",
         "protbind_library_verify_uniprot",
+        "protbind_knowledge_document_inspect",
+        "protbind_knowledge_import",
+        "protbind_knowledge_search",
+        "protbind_library_rag_sync",
+        "protbind_library_rag_search",
     ):
         assert config["permission"][name] == "ask"
+    assert config["permission"]["protbind_knowledge_model_status"] == "allow"
     assert config["permission"]["skill"]["protbind-library"] == "allow"
 
 
@@ -60,7 +66,12 @@ def test_opencode_mcp_uses_aiaa_stdio_and_no_worker_placeholders() -> None:
     ]
     assert "serve" in command
     assert "--worker-config" not in command
-    assert command[-2:] == ["--library-config", ".protbind/library.json"]
+    assert command[-4:] == [
+        "--library-config",
+        ".protbind/library.json",
+        "--knowledge-model",
+        ".protbind/models/bge-m3",
+    ]
     assert mcp["environment"] == {
         "HF_HUB_OFFLINE": "1",
         "TRANSFORMERS_OFFLINE": "1",

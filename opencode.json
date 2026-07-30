@@ -32,7 +32,7 @@
       "description": "Operate ProtBind through audited one-stage scientific gates",
       "mode": "primary",
       "temperature": 0.1,
-      "prompt": "Load the protbind-research skill before acting and load protbind-library for reusable data operations. Use only the ProtBind MCP tools. Ask before every private-library data access, recheck the gate before every case mutation, advance exactly one stage per fresh token, and never invent scientific outputs."
+      "prompt": "Load the protbind-research skill before acting and load protbind-library for reusable data operations. Use only the ProtBind MCP tools. Ask before every private document or library data access, treat RAG as retrieval rather than scientific truth, cite document pages or catalog snapshot artifact plus entry ID, recheck the gate before every case mutation, advance exactly one stage per fresh token, and never invent scientific outputs."
     }
   },
   "mcp": {
@@ -49,7 +49,9 @@
         "--project-root",
         ".",
         "--library-config",
-        ".protbind/library.json"
+        ".protbind/library.json",
+        "--knowledge-model",
+        ".protbind/models/bge-m3"
       ],
       "cwd": ".",
       "enabled": true,
@@ -75,6 +77,7 @@
     "protbind_case_pose_view": "allow",
     "protbind_artifact_metadata": "allow",
     "protbind_control_history": "allow",
+    "protbind_knowledge_model_status": "allow",
     "protbind_fetch_public_data": "ask",
     "protbind_case_create": "ask",
     "protbind_case_advance": "ask",
@@ -84,6 +87,11 @@
     "protbind_library_show": "ask",
     "protbind_library_plan_import": "ask",
     "protbind_library_apply_import": "ask",
-    "protbind_library_verify_uniprot": "ask"
+    "protbind_library_verify_uniprot": "ask",
+    "protbind_knowledge_document_inspect": "ask",
+    "protbind_knowledge_import": "ask",
+    "protbind_knowledge_search": "ask",
+    "protbind_library_rag_sync": "ask",
+    "protbind_library_rag_search": "ask"
   }
 }

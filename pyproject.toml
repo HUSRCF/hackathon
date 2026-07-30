@@ -28,6 +28,7 @@ knowledge = [
   "pyseekdb",
   "FlagEmbedding",
   "PyMuPDF",
+  "sentence-transformers",
 ]
 mcp = [
   "mcp>=1.14,<2",

@@ -504,7 +504,10 @@ pyseekdb 时明确失败，不用 SQLite/JSONL 冒充生产 seekdb。
 
 [PowerMem](https://github.com/oceanbase/powermem) 只保存偏好、失败经验、常用协议和历史工作流摘要；每条
 记忆必须回指 seekdb job/artifact，不替代原始结果。BGE-M3 必须从显式本地目录加载；缺权重或
-FlagEmbedding 时不自动联网下载。
+FlagEmbedding 时不自动联网下载。PDF 导入逐页比较 PyMuPDF/Poppler，扫描页与 OCR 能力写入内容
+寻址回执；私有库的 seekdb 内容仅为脱敏投影，`catalog.sqlite` 仍是库状态源。可选
+Qwen3-Embedding-0.6B 必须通过本地 hash manifest 与 runtime 门禁，默认 CPU，不自动改动 AIAA
+Torch/Transformers。
 
 联网默认禁止。`knowledge fetch` 只接受 HTTPS、精确批准的域名、大小上限，并禁止自动跟随重定向；
 URL query 不进入 artifact source。RCSB sequence search 和 ColabFold 都需独立的

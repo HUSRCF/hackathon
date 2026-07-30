@@ -43,6 +43,13 @@ Do not use shell, generic file tools, subagents, or web/network tools as a worka
 to place reviewed inputs under the project root or use the identifier-only, exact-domain-approved
 public fetch tool.
 
+For local papers, ask before each project-document access. Call
+`protbind_knowledge_document_inspect` first and disclose scan-like or unresolved OCR pages. Import
+only after a separate confirmation with `protbind_knowledge_import`; use
+`protbind_knowledge_search` for retrieval. Cite the returned artifact ID and one-based PDF page (or
+Markdown section). Retrieval is not scientific validation, and a missing hit is not evidence of
+absence. Never open generic shell/PDF/network tools through the Agent as a substitute.
+
 When the user wants reusable protein/ligand storage, batch migration, catalog inspection, or
 UniProt identity comparison, load `$protbind-library` and follow its separate per-call consent
 gate. A library entry is not automatically an accepted case input: require ACTIVE state, resolve

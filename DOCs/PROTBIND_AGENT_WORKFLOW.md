@@ -302,8 +302,10 @@ attempt receipt 绑定。OpenMM 能量只作 preparation diagnostic，不是结�
 - Vina/cofold/实验事实之间的语义界线；
 - top 5 之外的漏斗计数和未独立验证候选数量。
 
-seekdb 是案例、作业、证据、文档 chunk 和 artifact 引用的唯一精确状态源。PowerMem 只存偏好、常用
-协议和失败经验摘要，并且每条记忆必须回指 seekdb job/artifact。
+seekdb 是案例、作业、证据、文档 chunk 和 artifact 引用的精确状态源；私有蛋白/配体库则由各自
+`catalog.sqlite` 掌管，seekdb 只保存不含序列/坐标/路径的检索投影。PDF 原生文字提取逐页保留页码，
+扫描页/OCR 缺失显式写入 extraction receipt。PowerMem 只存偏好、常用协议和失败经验摘要，并且每条
+记忆必须回指 seekdb job/artifact。
 
 ## 4. schema-2 持久状态与辅助任务
 
@@ -355,8 +357,8 @@ continuation token 绑定 run、完整 manifest SHA-256、下一阶段和控制�
 - `COMPLETE`：全部主阶段已有 accepted record。
 
 本地 MCP 提供 doctor、受约束 public-data fetch、case create/status/advance/attach/report/dossier/
-pose-view、artifact metadata、control history，以及只操作预配置别名/incoming 的六个私有库
-工具；不提供 shell、任意文件内容、原始坐标或开放
+pose-view、artifact metadata、control history、受限 PDF inspect/import/search，以及只操作预配置
+别名/incoming 的八个私有库工具（含脱敏 RAG sync/search）；不提供 shell、任意文件内容、原始坐标或开放
 网络。public-data fetch 是唯一网络工具，只接受白名单 source、公开 identifier、精确批准域名和
 项目内目的路径，不会 attach 或推进阶段。`case_dossier` 区分
 stage record 与 postflight acceptance，`case_pose_view` 只返回无坐标的 artifact/验证/box/几何
@@ -413,8 +415,8 @@ ESMFold v1 的 24 aa 本机 smoke 峰值约 7.91 GiB，但这不是 700 aa 上�
 | OpenFold3 | 官方 ROCm runtime validator 通过；checkpoint/真实 inference 未运行；仅有 cofold batch 验证器，无公开 batch builder/CLI，保持专家导入的可选旁路 |
 | validation | docking-derived batch/toolchain、pose/receptor attestation 已实现；原始 fixed-ten 为 8 completed/2 failed、top-1/top-5 7/10；`repair-protocol-v1` 为 9 completed/1 failed、独立 8/10；`repair-protocol-v2-restrained-sidechain` 为 10/10 completed、独立 top-1/top-5 9/10、IFP mean/median 0.6598/0.7014、`gate_complete=true`；三版结果分别保留，v2 仍是已观察 holdout 上的受控修订 |
 | deterministic report | 最终 Markdown/HTML 已实现；任意 checkpoint 的 JSON/Markdown/HTML run dossier 已接，区分 computed 与 accepted |
-| seekdb/BGE-M3 | adapter 和本地权重门已实现；完整资料集需显式导入 |
-| 私有 protein/ligand library | 独立用户根目录、SHA-256 CAS、SQLite catalog、scan/apply 收据、copy/move 二次确认、QC/quarantine、UniProt accession-only 本地比对、完整 CLI、六个 ask-only MCP 工具与 project skill 已实现 |
+| seekdb/PDF/embedding | PyMuPDF+Poppler 逐页提取、扫描页/OCR fail-closed 回执、scope-bound hybrid search、BGE-M3 本地权重门和六个 ask-only knowledge/library-RAG MCP 工具已实现；Tesseract 和完整资料集未安装/导入 |
+| 私有 protein/ligand library | 独立用户根目录、SHA-256 CAS、SQLite catalog、scan/apply 收据、copy/move 二次确认、QC/quarantine、UniProt accession-only 本地比对、脱敏 RAG 投影、完整 CLI、八个 ask-only MCP 工具与 project skill 已实现 |
 | P2Rank / DrutAI | P2Rank 受控运行与 CSV hypothesis parser 已实现，尚未进入 fpocket 共识主链；DrutAI 因环境/许可证/模型 provenance/bake-off 门禁保持 annotation-only 且默认禁用 |
 | HipFire/OpenCode/PowerMem | 受限 stdio MCP、逐阶段 gate/acceptance receipt、OpenCode default-deny 配置和 research/library project skills 已实现，MCP 1.14 握手通过；OpenCode executable/HipFire TUI 实跑与 PowerMem 仍待完成 |
 | 六页 Web UI | 已接真实 run dossier、pose 列表、loopback receptor/ligand view、box/pocket styles 和浏览器 PNG；3Dmol.js 2.5.4 有固定 URL/SHA-256/许可证安装器，仍待公开真实复合物浏览器验收 |

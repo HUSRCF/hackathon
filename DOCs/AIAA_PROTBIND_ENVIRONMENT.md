@@ -46,6 +46,19 @@ scripts/aiaa-protbind.sh -m protbind_agent index build \
 FlagEmbedding 自动导入 TensorFlow。确实需要预取公开模型时，只能在明确授权的独立
 导入步骤中临时关闭离线变量；私有序列和内部路径不得发送。
 
+本机 `pdftotext`/`pdftoppm` 来自 Poppler，可用于有文字层 PDF；当前没有 Tesseract/OCRmyPDF，
+所以扫描页会在 extraction receipt 中明确标成 unresolved。不要为此替换 AIAA Torch。BGE-M3
+沿用现有 CPU adapter；Qwen3-Embedding-0.6B 只作为可选的独立兼容性 overlay，当前
+Transformers 4.48.1 未通过其 `>=4.51.0` 门禁。
+
+```bash
+scripts/aiaa-protbind.sh -m protbind_agent knowledge inspect paper.pdf \
+  --pdf-backend auto --ocr auto --confirm-data-access
+
+scripts/aiaa-protbind.sh -m protbind_agent knowledge model-doctor \
+  --embedding-model /reviewed/local/model
+```
+
 OpenFold3 启动入口为：
 
 ```bash
