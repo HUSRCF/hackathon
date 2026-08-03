@@ -193,26 +193,30 @@ def write_p2rank_bundle(path: Path, value: dict[str, Any], *, replace: bool = Fa
 
 
 def drutai_admission_report() -> dict[str, Any]:
-    """Expose the current fail-closed DrutAI integration decision."""
+    """Expose the optional, annotation-only DrutAI integration decision."""
 
     return {
-        "status": "BLOCKED_PENDING_BAKEOFF",
-        "execution_mode": "separate-python-3.11-worker",
-        "scientific_role_if_admitted": "annotation-only; never hard-filter or binding evidence",
-        "known_upstream_constraints": {
-            "python": ">=3.11,<3.12",
-            "tensorflow": "2.14",
-            "numpy": "1.24.3",
-            "rdkit": "<2025",
+        "status": "OPTIONAL_ANNOTATION_PENDING_BAKEOFF",
+        "enabled_by_default": False,
+        "execution_mode": "separate drutai.predict process with a plain TSV contract",
+        "scientific_role": "annotation-only; never hard-filter or binding evidence",
+        "resolved_gates": {
+            "runtime": "ONNX/Snap external executable",
+            "publication_parity": "verified by the project maintainer",
+            "distribution": "ProtBind ships no DrutAI weights or upstream source code",
+            "license_boundary": (
+                "runtime acquisition requires exact GPL-3.0-only acknowledgement"
+            ),
         },
-        "blocking_gates": [
-            "resolve repository GPL-3.0 versus source-header MIT license conflict",
-            "pin model weights and publish/record SHA-256",
-            "record training set, split leakage controls, domain, and calibration",
+        "remaining_scientific_gates": [
+            "record training domain, protein-cluster and scaffold split leakage controls",
+            "establish applicability-domain abstention and calibration",
             "run public protein-SMILES positive/negative and decoy bake-off",
-            "show no regression when used only as an annotation",
+            "show no ranking regression when used only as a non-decisional annotation",
         ],
-        "model_or_score_may_be_used": False,
+        "annotation_score_may_be_used": True,
+        "hard_filter_allowed": False,
+        "binding_evidence_allowed": False,
     }
 
 

@@ -5,6 +5,8 @@ import struct
 import subprocess
 from pathlib import Path
 
+import pytest
+
 from protbind_agent.fusion import reciprocal_rank_fusion
 from protbind_agent.tripharm import (
     FeatureConformer,
@@ -18,7 +20,7 @@ from protbind_agent.tripharm import (
     rigid_transform,
     select_query_triangles,
 )
-from protbind_agent.tripharm_hip import query_index_hip
+from protbind_agent.tripharm_hip import query_index_batch_hip, query_index_hip
 
 
 def _features(offset: float = 0.0, distortion: float = 0.0):
@@ -230,3 +232,136 @@ def test_hip_prefilter_contract_commits_only_after_exact_cpu_parity(
     assert [hit.molecule_id for hit in result.hits] == ["exact", "near"]
     assert result.receipt["ranked_molecule_ids_exact"] is True
     assert result.receipt["committed_backend"] == "hip"
+
+
+def test_hip_request_cache_is_reused_and_tamper_evident(tmp_path, monkeypatch) -> None:
+    index = tmp_path / "library.sqlite"
+    build_index([_molecule("exact", _features())], index)
+    executable = tmp_path / "tripharm_hip_query"
+    executable.write_text("#!/bin/sh\n", encoding="utf-8")
+    executable.chmod(0o700)
+
+    def fake_run(argv, **_kwargs):
+        request = Path(argv[2]).read_bytes()
+        _, _, _, molecule_count, query_count, _ = struct.unpack_from(
+            "<8sIIIIf", request
+        )
+        Path(argv[4]).write_bytes(
+            struct.pack("<8sIII", b"TPHIPO1\0", 1, molecule_count, query_count)
+            + struct.pack(f"<{molecule_count}Q", *([1] * molecule_count))
+            + bytes(molecule_count * query_count * 4)
+        )
+        return subprocess.CompletedProcess(
+            argv,
+            0,
+            stdout='{"architecture":"gfx1100","kernel_seconds":0.001}',
+            stderr="",
+        )
+
+    monkeypatch.setattr("protbind_agent.tripharm_hip.subprocess.run", fake_run)
+    cache = tmp_path / "cache"
+    first = query_index_hip(
+        index, _features(), executable=executable, request_cache_dir=cache
+    )
+    second = query_index_hip(
+        index,
+        _features(),
+        executable=executable,
+        request_cache_dir=cache,
+        cpu_reference_ids=["exact"],
+    )
+    assert first.receipt["request_cache_hit"] is False
+    assert second.receipt["request_cache_hit"] is True
+    assert second.receipt["cpu_reference_scope"] == "external_precomputed"
+    request = next(cache.glob("*.tphipq"))
+    request.write_bytes(request.read_bytes() + b"tamper")
+    with pytest.raises(Exception, match="cache (hash|size) mismatch"):
+        query_index_hip(
+            index, _features(), executable=executable, request_cache_dir=cache
+        )
+
+
+def test_hip_static_batch_is_exact_reused_and_tamper_evident(
+    tmp_path, monkeypatch
+) -> None:
+    index = tmp_path / "library.sqlite"
+    build_index(
+        [
+            _molecule("exact", _features(offset=10.0)),
+            _molecule("near", _features(offset=-5.0, distortion=0.4)),
+        ],
+        index,
+    )
+    executable = tmp_path / "tripharm_hip_batch_query"
+    executable.write_text("#!/bin/sh\n", encoding="utf-8")
+    executable.chmod(0o700)
+
+    def fake_run(argv, **_kwargs):
+        static_data = Path(argv[2]).read_bytes()
+        magic, schema, _triangle_count, molecule_count = struct.unpack_from(
+            "<12sIII", static_data
+        )
+        assert magic == b"TPHIPIDX1\0\0\0"
+        query_data = Path(argv[4]).read_bytes()
+        query_magic, query_schema, batch_count, _queries, _tolerance = (
+            struct.unpack_from("<12sIIIf", query_data)
+        )
+        assert query_magic == b"TPHIPBAT1\0\0\0"
+        assert query_schema == schema
+        Path(argv[6]).write_bytes(
+            struct.pack(
+                "<12sIII", b"TPHIPBO1\0\0\0\0", schema, molecule_count, batch_count
+            )
+            + struct.pack(
+                f"<{molecule_count * batch_count}I",
+                *([1] * (molecule_count * batch_count)),
+            )
+        )
+        return subprocess.CompletedProcess(
+            argv,
+            0,
+            stdout=(
+                '{"architecture":"gfx1100","kernel_seconds":0.001,'
+                '"batch_queries":2}'
+            ),
+            stderr="",
+        )
+
+    monkeypatch.setattr("protbind_agent.tripharm_hip.subprocess.run", fake_run)
+    cache = tmp_path / "static-cache"
+    first = query_index_batch_hip(
+        index,
+        (_features(), _features(distortion=0.2)),
+        executable=executable,
+        static_cache_dir=cache,
+        tolerance_angstrom=1.0,
+        top_k=2,
+    )
+    second = query_index_batch_hip(
+        index,
+        (_features(), _features(distortion=0.2)),
+        executable=executable,
+        static_cache_dir=cache,
+        tolerance_angstrom=1.0,
+        top_k=2,
+        cpu_reference_ids=(
+            tuple(hit.molecule_id for hit in first.hits[0]),
+            tuple(hit.molecule_id for hit in first.hits[1]),
+        ),
+    )
+    assert first.receipt["static_cache_hit"] is False
+    assert second.receipt["static_cache_hit"] is True
+    assert first.receipt["ranked_molecule_ids_exact"] is True
+    assert first.receipt["cpu_ranked_scores_sha256"] == first.receipt[
+        "hip_ranked_scores_sha256"
+    ]
+    static_path = next(cache.glob("*.tphipidx"))
+    static_path.write_bytes(static_path.read_bytes() + b"tamper")
+    with pytest.raises(Exception, match="static cache (hash|size) mismatch"):
+        query_index_batch_hip(
+            index,
+            (_features(),),
+            executable=executable,
+            static_cache_dir=cache,
+            tolerance_angstrom=1.0,
+        )

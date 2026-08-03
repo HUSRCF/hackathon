@@ -1,6 +1,6 @@
 # ProtBind experiment tracker
 
-Updated: 2026-07-26
+Updated: 2026-08-04
 
 | ID | Gate | Status | Evidence |
 |---|---|---|---|
@@ -15,7 +15,15 @@ Updated: 2026-07-26
 | SELECT-02 | Production quick-Vina OS isolation with a chemistry-verified input | BLOCKED-BY-HOST | historical v3 verified-input workflow reached `SELECTED`; current doctor still reports bubblewrap `present_but_unusable`, rc 1, `RTM_NEWADDR`; no bypass is allowed |
 | CAL-01 | Known-site calibration is consumed before candidate selection | PASS | real 1IEP PASS receipt binds canonical source redock, exact prepared receptor/prep receipt, target and box; selection 2.5 and quick input hashes recorded; native reference absent from quick input |
 | HIP-01 | 100k triangle CPU/HIP exactness | PASS | recall 1.0; zero mask/float mismatches |
-| HIP-02 | Persisted-index top-512 exactness and ≥5× end-to-end | PENDING | triangle microbenchmark is insufficient |
+| HIP-02 | Persisted-index exactness and ≥5× end-to-end | PASS-PARITY / FAIL-SPEEDUP | complete CPU/HIP score-vector parity passes on ALDH1/MAPK1/MTORC1, but the CPU exact finalizer dominates full-path time; no end-to-end acceleration claim |
+| HIP-03 | Static content-addressed HIP corpus and batch query mode | PASS-STATIC / PENDING-RESIDENT | five warm-ups + 30 measured static-index batch runs complete on three targets; process/kernel p50 are reported separately, while a long-lived resident service remains future work |
+| PHARM-01 | Independent native Pharmer application baseline | PASS-PILOT | DUD-E and exposed ESR1/TP53 runs complete; feature semantics differ from RDKit and are reported separately |
+| PHARM-02 | Complete-score, tie-safe AP/EF1/BEDROC metrics | PASS-CODE | positive controls, zero-score tie invariance and deterministic bootstrap pass |
+| PHARM-03 | Train-only frozen query ensembles | PASS | ALDH1/MAPK1/MTORC1 query ensembles, tolerances and aggregation were selected from train-only inputs and hash-frozen before validation |
+| PHARM-04 | One-shot untouched LIT-PCBA validation | PASS-PROTOCOL / FAIL-COMPETITION-STRENGTH | all three frozen validation runs and aggregate complete; exploratory-positive gate passes, median EF1% <2 competition-strength gate fails, and broad superiority over Pharmer is unsupported |
+| AGENT-01 | Local Radeon Agent tool-use benchmark | PASS | W7900/gfx1100, HipFire/Qwen, 1 warm-up + 3 measured; tool sequence, success and artifact citation rates all 1.0; evidence-eligible receipt `protbind-agent-w7900-c58ca3c.json` |
+| DRUTAI-01 | Optional isolated sequence-SMILES annotation | PASS-RUNTIME / ANNOTATION-ONLY | pinned `convmixer64` and real strict-confined Snap one-record smoke complete; no network interface, cache disabled, never binding evidence or hard filter |
+| ASSAY-01 | Immutable experimental-table import and explicit curve fits | PASS-P0 | preview/commit, append-only catalog, 4PL and one-site fit substrate implemented; assay-specific images/kinetics/mixed-effects remain future work |
 | DOCK-01 | Real Vina/Meeko/PoseBusters/sPyRMSD redocking | PASS | three final public runs; 2/3 top-1 and 3/3 top-5 recovery |
 | DOCK-02 | Canonical SDF/PDBQT, receptor/pose receipts, source/code/tool/license lineage | PASS | final `result.json` receipts and contract tests |
 | PRIV-01 | Native reference is validation-only and cannot affect committed docking input | PASS | three final runs; reference absent from argv/docking case; workflow noninterference tests |
@@ -25,7 +33,7 @@ Updated: 2026-07-26
 | PREP-01 | Conservative outside-pocket heavy-atom repair and constrained added-atom geometry | PASS | explicit revision/resume binding; 6 Å protected pocket, no loops/`--allow_bad_res`; v2 fixes all original heavy atoms, moves only added atoms/transient H, checks distances/chirality, and retries only narrow geometry/RDKit failures at 250→1000→5000; 7BTT/7YZU pass real Meeko at 250 |
 | IFP-01 | Local, receipted ProLIF receptor preparation | PASS | 8 Å whole-residue union around both ligands; atom identity and coordinates preserved; used by original fixed-ten, remediation and `repair-protocol-v1` independent regressions |
 | OMM-01 | OpenMM HIP platform and parameterized minimization parity | BLOCKED-BY-BUILD | current AIAA doctor exposes Reference/CPU only |
-| QA-01 | Full automated regression | PASS | Ruff clean; compileall clean; 273 pytest tests passed, including optimizer geometry, narrow RDKit retry, revision binding and resume rejection |
+| QA-01 | Full automated regression | PASS | Ruff and compileall clean; 454 pytest tests pass in the pinned AIAA science overlay |
 
 Next execution order:
 
@@ -39,7 +47,9 @@ Next execution order:
 4. Integrate the implemented conservative repair, constrained optimizer and receipted ProLIF crop
    into the production validation path, then add explicit heterogen/cofactor retention and
    parameterization decisions.
-5. Complete persisted-index TriPharm HIP top-512 parity and end-to-end speed measurement.
+5. Preserve the completed frozen TriPharm one-shot receipts, aggregate and 30-repeat static
+   prefilter receipts unchanged. A resident-GPU exact finalizer is required before revisiting an
+   application-speedup claim; repeat exactness on R9700/gfx1201 when that host is available.
 6. Build/verify OpenMM HIP, then evaluate optional OpenFold3 only after a real checkpoint gate.
 7. Re-run automatic quick Vina on a host that permits the bubblewrap network namespace, keeping
    production isolation unchanged and fail closed.

@@ -1,0 +1,124 @@
+{
+  "backend": "cpu-reference",
+  "duration_seconds": {
+    "p50": 0.029163050000533985,
+    "p95": 0.033387660400148886,
+    "samples": [
+      0.03118720200018288,
+      0.02759108999998716,
+      0.029163050000533985,
+      0.02930468100021244,
+      0.03433071400013432,
+      0.028171726999971725,
+      0.026617720000103873
+    ]
+  },
+  "eligible_as_hip_performance_evidence": false,
+  "hardware": {
+    "architectures": [
+      "gfx1100",
+      "gfx11"
+    ],
+    "captured_at": "2026-08-02T11:43:52.145329+00:00",
+    "competition_roles": [
+      "primary-radeon-rdna3",
+      "unclassified"
+    ],
+    "device_architectures": [
+      "gfx1100",
+      "gfx1100"
+    ],
+    "evidence": [
+      {
+        "available": true,
+        "command": [
+          "rocminfo"
+        ],
+        "error": null,
+        "output_sha256": "e9e23b3095de23a9fc224e2718a08656da145c22753f5d4146ab1ab5df8c1bd3",
+        "relevant_output": [
+          "Compute Unit:            128",
+          "Name:                    gfx1100",
+          "Compute Unit:            96",
+          "Name:                    amdgcn-amd-amdhsa--gfx1100",
+          "Name:                    amdgcn-amd-amdhsa--gfx11-generic",
+          "Name:                    gfx1100",
+          "Compute Unit:            96",
+          "Name:                    amdgcn-amd-amdhsa--gfx1100",
+          "Name:                    amdgcn-amd-amdhsa--gfx11-generic"
+        ],
+        "return_code": 0
+      },
+      {
+        "available": true,
+        "command": [
+          "amd-smi",
+          "static",
+          "--json"
+        ],
+        "error": null,
+        "output_sha256": "74a4a57cc1d0d081b41fe9646621b2a09d4f71934bb835c4cfbcea613256d30c",
+        "relevant_output": [
+          "\"target_graphics_version\": \"gfx1100\",",
+          "\"slowdown_vram_temperature\": {",
+          "\"shutdown_vram_temperature\": {",
+          "\"GFX\": \"DISABLED\",",
+          "\"vram\": {",
+          "\"target_graphics_version\": \"gfx1100\",",
+          "\"slowdown_vram_temperature\": {",
+          "\"shutdown_vram_temperature\": {",
+          "\"GFX\": \"DISABLED\",",
+          "\"vram\": {"
+        ],
+        "return_code": 0
+      },
+      {
+        "available": true,
+        "command": [
+          "rocm-smi",
+          "--showproductname",
+          "--showmeminfo",
+          "vram",
+          "--showdriverversion"
+        ],
+        "error": null,
+        "output_sha256": "59149e3803439410194d1fb41e48f19ec05091a3a039d84f543a4c4bd4a30278",
+        "relevant_output": [
+          "Driver version: 6.19.14.31400000",
+          "GPU[0]\t\t: VRAM Total Memory (B): 48301604864",
+          "GPU[0]\t\t: VRAM Total Used Memory (B): 137478144",
+          "GPU[1]\t\t: VRAM Total Memory (B): 48301604864",
+          "GPU[1]\t\t: VRAM Total Used Memory (B): 82350080",
+          "GPU[0]\t\t: Card Series: \t\tAMD Radeon Pro W7900",
+          "GPU[0]\t\t: Card Model: \t\t0x7448",
+          "GPU[0]\t\t: GFX Version: \t\tgfx1100",
+          "GPU[1]\t\t: Card Series: \t\tAMD Radeon Pro W7900 Dual Slot",
+          "GPU[1]\t\t: Card Model: \t\t0x744a",
+          "GPU[1]\t\t: GFX Version: \t\tgfx1100"
+        ],
+        "return_code": 0
+      }
+    ],
+    "host_fingerprint": "b5d65f0ae389b602",
+    "hsa_override_active": false,
+    "platform": "Linux-7.0.0-28-generic-x86_64-with-glibc2.39",
+    "python_version": "3.12.7",
+    "rocm_version": null
+  },
+  "index": {
+    "chemistry_verified": true,
+    "config_hash": "1e4e5878f43ec9213a7af4a4a10f59332c158223ace218c058099b63b6c0fc3e",
+    "conformer_count": 2955,
+    "index_sha256": "e9342fe47db97626c0995690dc68f7c0feed91c58e626a5ce33b8da70b876de5",
+    "input_sha256": null,
+    "molecule_count": 2955,
+    "triangle_count": 563902
+  },
+  "query_sha256": "ef05f4ad1e18a0f17ee25a8f73f9b459c4db59982807c8f255e8504e826bed3d",
+  "ranked_molecule_ids_sha256": "eefd804db860f26d34d24ee6b68c6046cefaa384ed44f1f554ca02eaa0ee997a",
+  "repetitions": 7,
+  "result_count": 20,
+  "schema_version": "1.0",
+  "top_k": 2955,
+  "warmup_runs": 2
+}

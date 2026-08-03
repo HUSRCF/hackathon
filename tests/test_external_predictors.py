@@ -74,10 +74,12 @@ def test_p2rank_parser_rejects_unpinned_version(tmp_path: Path) -> None:
         )
 
 
-def test_drutai_is_fail_closed_and_annotation_only() -> None:
+def test_drutai_is_optional_and_annotation_only() -> None:
     report = drutai_admission_report()
 
-    assert report["status"] == "BLOCKED_PENDING_BAKEOFF"
-    assert report["model_or_score_may_be_used"] is False
-    assert "annotation-only" in report["scientific_role_if_admitted"]
-    assert any("license conflict" in gate for gate in report["blocking_gates"])
+    assert report["status"] == "OPTIONAL_ANNOTATION_PENDING_BAKEOFF"
+    assert report["annotation_score_may_be_used"] is True
+    assert report["hard_filter_allowed"] is False
+    assert report["binding_evidence_allowed"] is False
+    assert "annotation-only" in report["scientific_role"]
+    assert "publication_parity" in report["resolved_gates"]

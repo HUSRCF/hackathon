@@ -1,0 +1,10 @@
+{
+  "container": "docker.io/dkoes/pharmit:latest",
+  "image_created": "2016-03-10T23:36:21.253198845Z",
+  "image_digest": "sha256:3a44f86d00bdb1fc196dd8beb996602ecbf315551c4da30667d3705c9088cfb1",
+  "image_id": "0da963ff44629d15e796f8c1e1fd312378fc181d8194e8fe9a24f90382ec75a5",
+  "implementation": "Pharmit backend carrying Pharmer",
+  "integration": "external process only; no GPL source copied or linked into ProtBind",
+  "license": "GPL-2.0-or-later",
+  "source_revision": "1904ebc2f5a9f886c5fd276d360545f9cc1c8a5d"
+}

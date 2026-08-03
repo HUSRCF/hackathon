@@ -67,7 +67,9 @@
     "skill": {
       "*": "deny",
       "protbind-research": "allow",
-      "protbind-library": "allow"
+      "protbind-library": "allow",
+      "protbind-drutai": "allow",
+      "protbind-assay-data": "allow"
     },
     "question": "allow",
     "protbind_doctor": "allow",
@@ -78,6 +80,13 @@
     "protbind_artifact_metadata": "allow",
     "protbind_control_history": "allow",
     "protbind_knowledge_model_status": "allow",
+    "protbind_drutai_status": "allow",
+    "protbind_drutai_model_acquire": "ask",
+    "protbind_drutai_annotate": "ask",
+    "protbind_experiment_import_preview": "ask",
+    "protbind_experiment_import_commit": "ask",
+    "protbind_experiment_list": "ask",
+    "protbind_experiment_fit_curve": "ask",
     "protbind_fetch_public_data": "ask",
     "protbind_case_create": "ask",
     "protbind_case_advance": "ask",

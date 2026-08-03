@@ -1,0 +1,61 @@
+flowchart TB
+    scientist["Researcher<br/>local private data"]
+
+    subgraph interaction["Local interaction layer"]
+        direction LR
+        ui["CLI / Web / OpenCode"]
+        agent["HipFire + Qwen Agent<br/>AMD Radeon GPU"]
+    end
+
+    subgraph control["Deterministic control plane"]
+        direction LR
+        tools["Fixed ToolSpec / MCP allowlist"]
+        approval["ShadowPlan + per-tool approval"]
+        gates["Scientific stage gates<br/>one-time continuation tokens"]
+    end
+
+    subgraph science["Evidence-bounded research tools"]
+        direction LR
+        screening["TriPharm screening<br/>CPU reference + ROCm HIP parity"]
+        docking["Meeko / Vina / PoseBusters<br/>RMSD + ProLIF validation"]
+        drutai["Optional DrutAI<br/>sequence-SMILES annotation only"]
+        assays["Experimental assays<br/>immutable import + explicit fits"]
+        knowledge["Local literature and memory<br/>seekdb projection"]
+    end
+
+    subgraph evidence["Private evidence layer"]
+        direction LR
+        artifacts["SHA-256 artifact store"]
+        manifests["Hash-bound manifests<br/>receipts and audit timeline"]
+        reports["Evidence-bounded reports<br/>unknown stays unknown"]
+    end
+
+    public["Approved public registries<br/>identifier-bound fetch only"]
+
+    scientist --> ui
+    public -. "explicit domain approval" .-> approval
+    ui --> agent
+    agent --> tools
+    tools --> approval
+    approval --> gates
+    gates --> screening
+    gates --> docking
+    gates --> drutai
+    gates --> assays
+    gates --> knowledge
+    screening --> artifacts
+    docking --> artifacts
+    drutai --> artifacts
+    assays --> artifacts
+    knowledge --> artifacts
+    artifacts --> manifests
+    manifests --> reports
+
+    classDef input fill:#ECFDF5,stroke:#10B981,color:#111827,stroke-width:2px;
+    classDef compute fill:#EFF6FF,stroke:#2563EB,color:#111827,stroke-width:2px;
+    classDef controlNode fill:#F5F3FF,stroke:#7C3AED,color:#111827,stroke-width:2px;
+    classDef output fill:#FFF7ED,stroke:#EA580C,color:#111827,stroke-width:2px;
+    class scientist,public input;
+    class ui,agent,screening,docking,drutai,assays,knowledge compute;
+    class tools,approval,gates controlNode;
+    class artifacts,manifests,reports output;

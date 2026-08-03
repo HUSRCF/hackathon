@@ -40,6 +40,13 @@ from .dossier import (
     dossier_content,
     persist_run_dossier,
 )
+from .drutai import (
+    DRUTAI_DOWNLOAD_HOST,
+    DRUTAI_LICENSE_ACKNOWLEDGEMENT,
+    DRUTAI_MODELS,
+    DrutAIManager,
+)
+from .experimental_assays import FIT_MODELS, ExperimentalAssayStore
 from .external_predictors import (
     parse_p2rank_predictions,
     run_p2rank,
@@ -61,6 +68,12 @@ from .library import (
     save_library_config,
 )
 from .manifest import RunManifest, RunState
+from .mmseqs import (
+    MMseqsConfig,
+    persist_mmseqs_receipt,
+    run_mmseqs_cluster,
+    run_mmseqs_search,
+)
 from .models import RCSBCoordinatePolicy, ResearchMode
 from .pose_view import build_pose_scene_summary
 from .posebusters_holdout import (
@@ -93,6 +106,7 @@ from .research_leakage import (
     build_research_leakage_audit,
     persist_research_leakage_audit,
 )
+from .screening_benchmark import build_three_way_screen_receipt
 from .structure import StructureCapabilityError
 from .study_evidence import (
     build_academic_evidence,
@@ -416,6 +430,51 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     index_inspect = index_commands.add_parser("inspect", help="Show index hashes and counts.")
     index_inspect.add_argument("index", type=Path)
+
+    homology = commands.add_parser(
+        "homology",
+        help=(
+            "Run optional local MMseqs2 protein homology search or sequence clustering; "
+            "never changes a ProtBind case."
+        ),
+    )
+    homology_commands = homology.add_subparsers(
+        dest="homology_command", required=True
+    )
+    homology_cluster = homology_commands.add_parser(
+        "cluster",
+        help="Build a local MMseqs2 cluster assignment and hash-bound receipt.",
+    )
+    homology_cluster.add_argument("--input", type=Path, required=True)
+    homology_cluster.add_argument("--assignments", type=Path, required=True)
+    homology_cluster.add_argument("--receipt", type=Path, required=True)
+    homology_cluster.add_argument("--executable", default="mmseqs")
+    homology_cluster.add_argument("--min-seq-id", type=float, default=0.3)
+    homology_cluster.add_argument("--coverage", type=float, default=0.8)
+    homology_cluster.add_argument("--cov-mode", type=int, default=0)
+    homology_cluster.add_argument("--sensitivity", type=float, default=7.5)
+    homology_cluster.add_argument("--threads", type=int, default=1)
+    homology_cluster.add_argument("--timeout", type=float, default=3600.0)
+    homology_cluster.add_argument("--replace", action="store_true")
+    _data_access_confirmation(homology_cluster)
+
+    homology_search = homology_commands.add_parser(
+        "search",
+        help="Search a local target protein FASTA with MMseqs2 and emit a receipt.",
+    )
+    homology_search.add_argument("--query", type=Path, required=True)
+    homology_search.add_argument("--target", type=Path, required=True)
+    homology_search.add_argument("--output", type=Path, required=True)
+    homology_search.add_argument("--receipt", type=Path, required=True)
+    homology_search.add_argument("--executable", default="mmseqs")
+    homology_search.add_argument("--min-seq-id", type=float, default=0.3)
+    homology_search.add_argument("--coverage", type=float, default=0.8)
+    homology_search.add_argument("--cov-mode", type=int, default=0)
+    homology_search.add_argument("--sensitivity", type=float, default=7.5)
+    homology_search.add_argument("--threads", type=int, default=1)
+    homology_search.add_argument("--timeout", type=float, default=3600.0)
+    homology_search.add_argument("--replace", action="store_true")
+    _data_access_confirmation(homology_search)
 
     assets = commands.add_parser("assets", help="Install pinned offline Web UI assets.")
     assets_commands = assets.add_subparsers(dest="assets_command", required=True)
@@ -857,6 +916,88 @@ def _build_parser() -> argparse.ArgumentParser:
     _workspace_argument(ask)
     _data_access_confirmation(ask)
 
+    experiment = commands.add_parser(
+        "experiment",
+        help="Import and analyze private wet-lab assay measurements.",
+    )
+    experiment_commands = experiment.add_subparsers(
+        dest="experiment_command", required=True
+    )
+    experiment_preview = experiment_commands.add_parser(
+        "preview",
+        help="Validate a CSV/TSV and print a non-mutating hash-bound import plan.",
+    )
+    experiment_preview.add_argument("--source", type=Path, required=True)
+    _workspace_argument(experiment_preview)
+    _data_access_confirmation(experiment_preview)
+    experiment_commit = experiment_commands.add_parser(
+        "commit",
+        help="Commit the exact reviewed assay import plan without overwriting history.",
+    )
+    experiment_commit.add_argument("--source", type=Path, required=True)
+    experiment_commit.add_argument("--plan-id", required=True)
+    _workspace_argument(experiment_commit)
+    _data_access_confirmation(experiment_commit)
+    experiment_list = experiment_commands.add_parser(
+        "list",
+        help="List experiment metadata without returning raw measurements.",
+    )
+    experiment_list.add_argument("--limit", type=int, default=100)
+    _workspace_argument(experiment_list)
+    _data_access_confirmation(experiment_list)
+    experiment_fit = experiment_commands.add_parser(
+        "fit",
+        help="Fit one explicitly selected deterministic curve model.",
+    )
+    experiment_fit.add_argument("--experiment-id", required=True)
+    experiment_fit.add_argument("--model", choices=FIT_MODELS, required=True)
+    _workspace_argument(experiment_fit)
+    _data_access_confirmation(experiment_fit)
+
+    predictor = commands.add_parser(
+        "predictor",
+        help="Operate optional, scientifically bounded external predictors.",
+    )
+    predictor_commands = predictor.add_subparsers(
+        dest="predictor_command", required=True
+    )
+    drutai_status = predictor_commands.add_parser(
+        "drutai-status",
+        help="Inspect optional DrutAI models without reading private inputs.",
+    )
+    _workspace_argument(drutai_status)
+    drutai_acquire = predictor_commands.add_parser(
+        "drutai-acquire",
+        help="Acquire one fixed-commit ONNX model after GPL acknowledgement.",
+    )
+    drutai_acquire.add_argument("--model", choices=tuple(DRUTAI_MODELS), required=True)
+    drutai_acquire.add_argument(
+        "--approve-network",
+        required=True,
+        help=f"Approve the exact fixed-model host; required value is {DRUTAI_DOWNLOAD_HOST}.",
+    )
+    drutai_acquire.add_argument(
+        "--accept-gpl-3.0",
+        dest="accept_gpl_3_0",
+        action="store_true",
+        required=True,
+        help="Acknowledge conservative GPL-3.0-only handling of third-party weights.",
+    )
+    drutai_acquire.add_argument("--replace", action="store_true")
+    _workspace_argument(drutai_acquire)
+    drutai_annotate = predictor_commands.add_parser(
+        "drutai-annotate",
+        help="Run a network-isolated, annotation-only sequence-SMILES check.",
+    )
+    drutai_annotate.add_argument("--input", type=Path, required=True)
+    drutai_annotate.add_argument("--fasta-directory", type=Path, required=True)
+    drutai_annotate.add_argument("--model", choices=tuple(DRUTAI_MODELS), required=True)
+    drutai_annotate.add_argument("--threads", type=int)
+    drutai_annotate.add_argument("--batch-size", type=int, default=2000)
+    drutai_annotate.add_argument("--abstention-margin", type=float, default=0.05)
+    _workspace_argument(drutai_annotate)
+    _data_access_confirmation(drutai_annotate)
+
     serve = commands.add_parser("serve", help="Serve the private six-page web UI.")
     serve.add_argument("--host", default="127.0.0.1")
     serve.add_argument("--port", type=int, default=8765)
@@ -918,6 +1059,7 @@ def _build_parser() -> argparse.ArgumentParser:
             "research-leakage-audit",
             "study-freeze",
             "study-evidence",
+            "pharmacophore-three-way",
         ),
         help=(
             "Use 'redock' for one sealed-reference Meeko/Vina calibration or "
@@ -1131,6 +1273,10 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     benchmark.add_argument("--dataset-name")
+    benchmark.add_argument(
+        "--dataset-split",
+        help="Frozen split label for pharmacophore-three-way.",
+    )
     benchmark.add_argument("--dataset-version")
     benchmark.add_argument("--dataset-license")
     benchmark.add_argument(
@@ -1176,6 +1322,32 @@ def _build_parser() -> argparse.ArgumentParser:
             "Maximum exact sequence comparisons per split pair. Larger pairs use a "
             "deterministic sample and remain INCOMPLETE."
         ),
+    )
+    benchmark.add_argument(
+        "--screen-labels",
+        type=Path,
+        help="Hash-bound labeled screening-library manifest.",
+    )
+    benchmark.add_argument(
+        "--screen-top-k",
+        type=int,
+        help=(
+            "Optional screening rank limit; omission evaluates all returned parents "
+            "against the full label denominator."
+        ),
+    )
+    benchmark.add_argument(
+        "--pharmer-hit",
+        dest="pharmer_hits",
+        type=Path,
+        action="append",
+        default=[],
+        help="Pharmer hit SDF; repeat for a frozen triangle panel.",
+    )
+    benchmark.add_argument(
+        "--pharmer-provenance",
+        type=Path,
+        help="JSON object describing the external Pharmer executable/container.",
     )
 
     return parser
@@ -1350,6 +1522,58 @@ def _run(args: argparse.Namespace) -> int:
         )
         return 0
 
+    if args.command == "homology":
+        if not args.confirm_data_access:
+            raise PermissionError(
+                "MMseqs homology operations require explicit local-data confirmation"
+            )
+        config = MMseqsConfig(
+            min_seq_id=args.min_seq_id,
+            coverage=args.coverage,
+            cov_mode=args.cov_mode,
+            sensitivity=args.sensitivity,
+            threads=args.threads,
+        )
+        if args.homology_command == "cluster":
+            receipt = run_mmseqs_cluster(
+                args.input,
+                args.assignments,
+                executable=args.executable,
+                config=config,
+                timeout_seconds=args.timeout,
+                replace=args.replace,
+            )
+        elif args.homology_command == "search":
+            receipt = run_mmseqs_search(
+                args.query,
+                args.target,
+                args.output,
+                executable=args.executable,
+                config=config,
+                timeout_seconds=args.timeout,
+                replace=args.replace,
+            )
+        else:
+            raise AssertionError("unhandled homology command")
+        persist_mmseqs_receipt(receipt, args.receipt, replace=args.replace)
+        print(
+            json.dumps(
+                {
+                    "schema_version": receipt["schema_version"],
+                    "kind": receipt["kind"],
+                    "operation": receipt["operation"],
+                    "parameters": receipt["parameters"],
+                    "input_files": sorted(receipt["inputs"]),
+                    "output": receipt["output"],
+                    "receipt_sha256": receipt["receipt_sha256"],
+                    "receipt_file_sha256": sha256_file(args.receipt),
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
+        return 0
+
     if args.command == "assets":
         if args.assets_command != "install-3dmol":
             raise AssertionError("unhandled assets command")
@@ -1516,7 +1740,7 @@ def _run(args: argparse.Namespace) -> int:
                 executable=args.executable,
                 profile=args.profile,
                 timeout_seconds=args.timeout,
-                top_k=args.top_k,
+                top_k=args.screen_top_k,
             )
         elif args.site_command == "p2rank-parse":
             result = parse_p2rank_predictions(
@@ -1826,6 +2050,71 @@ def _run(args: argparse.Namespace) -> int:
         )
         return 0 if hits else 4
 
+    if args.command == "experiment":
+        store = ExperimentalAssayStore(args.workspace)
+        if args.experiment_command == "preview":
+            result = store.preview_import(args.source)
+        elif args.experiment_command == "commit":
+            result = store.commit_import(
+                args.source,
+                plan_id=args.plan_id,
+                data_access_confirmed=args.confirm_data_access,
+            )
+        elif args.experiment_command == "list":
+            result = store.list_experiments(limit=args.limit)
+        elif args.experiment_command == "fit":
+            result = store.fit_curve(
+                experiment_id=args.experiment_id,
+                model=args.model,
+                data_access_confirmed=args.confirm_data_access,
+            )
+        else:
+            raise AssertionError("unhandled experiment command")
+        print(json.dumps(result, ensure_ascii=False, sort_keys=True, indent=2))
+        return 0
+
+    if args.command == "predictor":
+        manager = DrutAIManager(args.workspace)
+        if args.predictor_command == "drutai-status":
+            result = manager.status()
+        elif args.predictor_command == "drutai-acquire":
+            print(
+                json.dumps(
+                    {
+                        "warning": (
+                            "Third-party ONNX weights are not distributed by ProtBind and "
+                            "will be handled conservatively as GPL-3.0-only artifacts."
+                        ),
+                        "source_host": DRUTAI_DOWNLOAD_HOST,
+                        "model": args.model,
+                        "scientific_role": "annotation-only; never binding evidence",
+                    },
+                    ensure_ascii=False,
+                    sort_keys=True,
+                ),
+                file=sys.stderr,
+            )
+            result = manager.acquire_model(
+                model=args.model,
+                approved_domain=args.approve_network,
+                license_acknowledgement=DRUTAI_LICENSE_ACKNOWLEDGEMENT,
+                replace=args.replace,
+            )
+        elif args.predictor_command == "drutai-annotate":
+            result = manager.annotate(
+                input_tsv=args.input,
+                fasta_directory=args.fasta_directory,
+                model=args.model,
+                data_access_confirmed=args.confirm_data_access,
+                threads=args.threads,
+                batch_size=args.batch_size,
+                abstention_margin=args.abstention_margin,
+            )
+        else:
+            raise AssertionError("unhandled predictor command")
+        print(json.dumps(result, ensure_ascii=False, sort_keys=True, indent=2))
+        return 0
+
     if args.command == "serve":
         if args.host not in {"127.0.0.1", "localhost", "::1"}:
             raise ValueError("ProtBind web UI may only bind to a loopback address")
@@ -1852,6 +2141,56 @@ def _run(args: argparse.Namespace) -> int:
         return 0
 
     if args.command == "benchmark":
+        if args.benchmark_command == "pharmacophore-three-way":
+            required = {
+                "--dataset-name": args.dataset_name,
+                "--dataset-split": args.dataset_split,
+                "--screen-labels": args.screen_labels,
+                "--index": args.index,
+                "--query": args.query,
+                "--pharmer-hit": args.pharmer_hits,
+            }
+            missing = [option for option, value in required.items() if not value]
+            if missing:
+                raise ValueError(
+                    "benchmark pharmacophore-three-way requires " + ", ".join(missing)
+                )
+            provenance = None
+            if args.pharmer_provenance is not None:
+                provenance = json.loads(
+                    args.pharmer_provenance.read_text(encoding="utf-8")
+                )
+                if not isinstance(provenance, dict):
+                    raise ValueError("--pharmer-provenance must contain a JSON object")
+            receipt = build_three_way_screen_receipt(
+                dataset_name=args.dataset_name,
+                dataset_split=args.dataset_split,
+                labels_path=args.screen_labels,
+                index_path=args.index,
+                query_path=args.query,
+                pharmer_hit_paths=args.pharmer_hits,
+                output=args.output,
+                hip_executable=(
+                    args.hip_executable if args.backend == "hip" else None
+                ),
+                pharmer_provenance=provenance,
+                top_k=args.top_k,
+                overwrite=args.force,
+            )
+            print(
+                json.dumps(
+                    {
+                        "dataset": receipt["dataset"],
+                        "pharmer_hit_set": receipt["pharmer_cpu"]["metrics"]["hit_set"],
+                        "tripharm_hit_set": receipt["tripharm_cpu"]["metrics"]["hit_set"],
+                        "hip_status": receipt["tripharm_hip"]["status"],
+                        "receipt_sha256": receipt["receipt_sha256"],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+            )
+            return 0
         if args.benchmark_command == "research-leakage-audit":
             if args.leakage_manifest is None:
                 raise ValueError(

@@ -1,0 +1,53 @@
+{
+  "backend": "hip-static-resident-batch-prefilter+cpu-exact-ranking",
+  "batch_process_seconds": 0.8350401139978203,
+  "committed_backend": "hip",
+  "cpu_exact_finalize_seconds": 0.4717081839989987,
+  "cpu_ranked_ids_sha256": "93f0b465f381976df1d4020c0a2f9191bec25d0bfa5c96d1eb3efbf990a352db",
+  "cpu_ranked_scores_sha256": "af23810b53ac7d44c286fa4bc25e9a668c4db7edfd7cdce8e4bdbde6265226f7",
+  "cpu_reference_scope": "measured_inline",
+  "cpu_reference_seconds": 0.8040608930023154,
+  "executable_sha256": "5dcb2869c5e93926a20a798be315432fcc661d57717df72279dae7b3f9e8553d",
+  "hip_ranked_ids_sha256": "93f0b465f381976df1d4020c0a2f9191bec25d0bfa5c96d1eb3efbf990a352db",
+  "hip_ranked_scores_sha256": "af23810b53ac7d44c286fa4bc25e9a668c4db7edfd7cdce8e4bdbde6265226f7",
+  "index_sha256": "5e2e25396ec0466c482c65d0dff6be1897713b21ce768b98410e342e550bc6ca",
+  "kernel": {
+    "allocated_vram_bytes": 51736908,
+    "architecture": "gfx1100",
+    "batch_queries": 2,
+    "candidate_triangles": 2584816,
+    "device_to_host_seconds": 2.077e-05,
+    "host_to_device_seconds": 0.044881751,
+    "kernel_seconds": 0.000813924,
+    "kind": "tripharm-hip-static-resident-batch-prefilter",
+    "molecule_count": 5067,
+    "query_triangles": 2,
+    "schema_version": "1.0"
+  },
+  "kind": "protbind.tripharm-hip-static-batch-query-receipt",
+  "prefilter_molecule_counts": [
+    245,
+    245
+  ],
+  "query_features_sha256": [
+    "976f05bfb1963f161fcd9ac7e073d88c8c8eb74e4d7f39b1de7857e7f5d0316f",
+    "976f05bfb1963f161fcd9ac7e073d88c8c8eb74e4d7f39b1de7857e7f5d0316f"
+  ],
+  "query_payload_sha256": "de7a717a6010ec4237d22ce5b0c10e8fda9ba73fa1975bd550030d773469fd64",
+  "query_triangle_counts": [
+    1,
+    1
+  ],
+  "ranked_molecule_ids_exact": true,
+  "receipt_sha256": "903b3a18cdc3e771721379bf7b78f76ec81c5dd869259e5ab66b3dd40288c59c",
+  "schema_version": "1.0",
+  "score_semantics": "geometric pharmacophore match; not binding affinity",
+  "static_cache_hit": true,
+  "static_cache_key": "9d3b13c28c04cac083a970a61507805756353e00866f75c9b9546d4e4e7fcff1",
+  "static_export_seconds": 0.0,
+  "static_index_sha256": "48346fa4c5c4e06f40bacf17e2c589c8443c9310e3b59528414bbc33d99bc560",
+  "static_prepare_seconds": 0.3048201119963778,
+  "tolerance_angstrom": 1.0,
+  "top_k": 100000,
+  "triangle_count": 2584816
+}

@@ -1,0 +1,229 @@
+{
+  "claim_boundary": "retrospective experimental-label retrieval; not binding affinity, prospective hit validation, or an end-to-end GPU speedup claim",
+  "cross_engine": {
+    "feature_semantics_warning": "Pharmer SMARTS and RDKit BaseFeatures are independent feature perception implementations; hit-set disagreement is not solely a search-kernel error measure",
+    "hit_set_jaccard": 0.3969465648854962,
+    "intersection_count": 52,
+    "union_count": 131
+  },
+  "dataset": {
+    "name": "LIT-PCBA",
+    "split": "AVE-unbiased ESR1_ant validation"
+  },
+  "inputs": {
+    "index_sha256": "9eeb5490eb6abd32fc28115deda02f039f536883ed05932b86908c3678a1ccfc",
+    "labels_sha256": "846711e89ca18971062aebb6c9ae9423d3e1213b901c88225b4cbd5b1097a041",
+    "pharmer_hit_sha256": {
+      "triangle-000.sdf": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "triangle-001.sdf": "e66c52c252a65b1eb4a1dc8bcb36055fddf1d422ed0064041b84d5eb3ffe39c0",
+      "triangle-002.sdf": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "triangle-003.sdf": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "triangle-004.sdf": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "triangle-005.sdf": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "triangle-006.sdf": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "triangle-007.sdf": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "triangle-008.sdf": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "triangle-009.sdf": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "triangle-010.sdf": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "triangle-011.sdf": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "triangle-012.sdf": "7e46958b99070768a6fee7d02086b33de2df31f11abae85b5b2889185e391b7a",
+      "triangle-013.sdf": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "triangle-014.sdf": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "triangle-015.sdf": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "triangle-016.sdf": "39f49cf5ab31f8517e47af5b0f944c96fe72bf33b4f8769cb6a736103a2910ad",
+      "triangle-017.sdf": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "triangle-018.sdf": "4b2dbdad584d5b4b22d775f30a7728086769fa51234247a5e54ab98ada637ff6",
+      "triangle-019.sdf": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "triangle-020.sdf": "a2ea9a940e6151e1dad88407521039857f4a955c6625c2e8831e5f8d15c33a67",
+      "triangle-021.sdf": "64ec6b36f1d2fca6a34a255c2c0743e35c8a3c42e77f6c22f0ac86965b816f78",
+      "triangle-022.sdf": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "triangle-023.sdf": "fe0bb0ba18f2b5794b85eb0fcb36203562d42f06e17b4cafc1960ad7d9070714",
+      "triangle-024.sdf": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "triangle-025.sdf": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "triangle-026.sdf": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "triangle-027.sdf": "4e29b657f8b169975f867dae27ed0cdb2adc6bc6a2ba793050de901af99941c0",
+      "triangle-028.sdf": "24ae93c3556c0355d6888dac5b9296b2b8f2568dd69690cdd2d10ae00bed42c2",
+      "triangle-029.sdf": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "triangle-030.sdf": "4f92f1bd50d2bd7c8118411177d680fe67a3d8644550ca36854ae935d312e235",
+      "triangle-031.sdf": "a2684a15ac0a2aae215ac5536e32a9377d447a14a14966f5a929739e2eb227bf",
+      "triangle-032.sdf": "9f769bf403ff45fb77ff9aaf40bc6e6612dcd262dee34e10793b704d3b4b198c",
+      "triangle-033.sdf": "b6da60fbd5c415bc9560f504d97e8fa1e074446b9102332895801b8227ca52d8",
+      "triangle-034.sdf": "3874e2f22bb5549943a33b19a0a384d821b23a4a27253c158dc577533fa6b4bd",
+      "triangle-035.sdf": "d4bc13242e844f572bf75d504f28ff642c63fdd83c51cde4a9690108782e30da",
+      "triangle-036.sdf": "3ccdb3034ca1ebe8d845b5ade7a150c680bad2d6ec504cd900d696ae7454802e",
+      "triangle-037.sdf": "7b95b75ace054661ae5f99200b9dcb015cfb039cdab70eb2fbcc3c2e4db4f739",
+      "triangle-038.sdf": "a8e668500917a0f47bcdfd9477e07911c86f38bb37279aecdfa0097632ae1497",
+      "triangle-039.sdf": "a0b01959bdc43e2a5bc52ea85bf9e5486ffec5636c2a5fcbd4178860b8a87eb1",
+      "triangle-040.sdf": "92b061992cfc4862f644957a4aa69f848b38aa4cb0843f268baa648ad37ed2fe",
+      "triangle-041.sdf": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "triangle-042.sdf": "16d1d8ac7a78ede0e312a09ed6eb25078de5535fd957bc0fd5fc929c0ff107e6",
+      "triangle-043.sdf": "3eb3f6b8af0d7ada3e0e859074c80f8fd73ced9a922208b1728a947b07942fc3",
+      "triangle-044.sdf": "ffdddbed794debc0b5edb99d3f31a480feb3d5d80ad119eb368755dd1b926af0",
+      "triangle-045.sdf": "237d70fb5e3df31942b697a6a7c762328ffd8becc012658356331bf5f84d37cb",
+      "triangle-046.sdf": "c7703721b46f1899949feb617b4e2fceda2e8838ecf705367a6cf3cf54f2b86c",
+      "triangle-047.sdf": "70e9525e3ef88589a447de0b7b1b84a756179fcd6693effed10117e3c16a43fa",
+      "triangle-048.sdf": "451ba5dc57bd69e600d5d110735fb46d885d58d3bd0ed629928dedccf90d3070",
+      "triangle-049.sdf": "ebc4c1016cca61417f0427595469f4a96ab3c7dabbbf472749d316cec2f2d9bd",
+      "triangle-050.sdf": "c52902d29d42c31512220710377189947fd78193cf6fe80c523b8bab12262d74",
+      "triangle-051.sdf": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "triangle-052.sdf": "a2a754b5a55071944a044fa0085300a50b43a59fbc618371157a91f30b222d0b",
+      "triangle-053.sdf": "a6fcf80ba3b54dcd010d35c398c4f322ce1f12a8ab34afd21b7ba8be6c01f255",
+      "triangle-054.sdf": "74e628dfe515f54159e2d90b00eb88413abf02ae97677e76b72ac33217dc2c42",
+      "triangle-055.sdf": "3add0e1d444ccebe1efdf6b208452ca69b149e7ffe92de1eaa5215760f7c3764",
+      "triangle-056.sdf": "ed64bb9c404edc088a2fd65d0fad156486e3793fad35d7208befaec90a5e196c",
+      "triangle-057.sdf": "f30c55ecb844ff7e793f97bb2fe59df8a5a476e682c2b0dd5bb8dbe6b0d4e347",
+      "triangle-058.sdf": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "triangle-059.sdf": "64db1455ce92c1773cd2b378dc6fe3f146759826585c732c48164ca72e35f7a3",
+      "triangle-060.sdf": "e778a546165d352cc38d566908749c6c29e6199fe3583b2bdf42cac3144e7c18",
+      "triangle-061.sdf": "1eeea1e672e14e4d2b2da57b8eb351f5e06f545262efbe98487b035a3da3110b",
+      "triangle-062.sdf": "317f1fa52db19092c3da47f969e73958eb1bae27cf6b6c433271e1798556a11d",
+      "triangle-063.sdf": "0f718f6508b6fc28e6fa336907d5db7bb2d44268454ee8e29eb1c9fb410d8c03"
+    },
+    "query_sha256": "87e400b14379a218ce7312f32753186d53b06dd28782e58ef1226f3f44a3f16b"
+  },
+  "kind": "protbind.three-way-pharmacophore-screen",
+  "pharmer_cpu": {
+    "conformer_hit_count": 203,
+    "metrics": {
+      "active_retrieved_total": 0,
+      "active_total": 25,
+      "cutoffs": {
+        "0.010000": {
+          "cutoff": 9,
+          "enrichment_factor": 0.0,
+          "recall": 0.0,
+          "retrieved": 9,
+          "status": "COMPLETE",
+          "true_positives": 0
+        },
+        "0.050000": {
+          "cutoff": 41,
+          "enrichment_factor": 0.0,
+          "recall": 0.0,
+          "retrieved": 41,
+          "status": "COMPLETE",
+          "true_positives": 0
+        }
+      },
+      "hit_set": {
+        "enrichment_factor": 0.0,
+        "precision": 0.0,
+        "recall": 0.0
+      },
+      "library_size": 819,
+      "ranked_count": 69
+    },
+    "parent_hit_count": 69,
+    "provenance": {
+      "container": "docker.io/dkoes/pharmit:latest",
+      "image_digest": "sha256:3a44f86d00bdb1fc196dd8beb996602ecbf315551c4da30667d3705c9088cfb1",
+      "implementation": "Pharmit backend carrying Pharmer",
+      "license": "GPL-2.0-or-later external process",
+      "source_revision": "1904ebc2f5a9f886c5fd276d360545f9cc1c8a5d"
+    },
+    "query_count": 64,
+    "ranking": "descending triangle-query coverage, best RMSD, parent ID"
+  },
+  "receipt_sha256": "8d7cc48f5b12a0a87f9681c504766e5815cbb830bac35d9f75be20c41ba494c3",
+  "schema_version": "1.0",
+  "tripharm_cpu": {
+    "metrics": {
+      "active_retrieved_total": 1,
+      "active_total": 25,
+      "cutoffs": {
+        "0.010000": {
+          "cutoff": 9,
+          "enrichment_factor": 0.0,
+          "recall": 0.0,
+          "retrieved": 9,
+          "status": "COMPLETE",
+          "true_positives": 0
+        },
+        "0.050000": {
+          "cutoff": 41,
+          "enrichment_factor": 0.0,
+          "recall": 0.0,
+          "retrieved": 41,
+          "status": "COMPLETE",
+          "true_positives": 0
+        }
+      },
+      "hit_set": {
+        "enrichment_factor": 0.28736842105263155,
+        "precision": 0.008771929824561403,
+        "recall": 0.04
+      },
+      "library_size": 819,
+      "ranked_count": 114
+    },
+    "wall_seconds": 0.6791569870001695
+  },
+  "tripharm_hip": {
+    "metrics": {
+      "active_retrieved_total": 1,
+      "active_total": 25,
+      "cutoffs": {
+        "0.010000": {
+          "cutoff": 9,
+          "enrichment_factor": 0.0,
+          "recall": 0.0,
+          "retrieved": 9,
+          "status": "COMPLETE",
+          "true_positives": 0
+        },
+        "0.050000": {
+          "cutoff": 41,
+          "enrichment_factor": 0.0,
+          "recall": 0.0,
+          "retrieved": 41,
+          "status": "COMPLETE",
+          "true_positives": 0
+        }
+      },
+      "hit_set": {
+        "enrichment_factor": 0.28736842105263155,
+        "precision": 0.008771929824561403,
+        "recall": 0.04
+      },
+      "library_size": 819,
+      "ranked_count": 114
+    },
+    "ranked_ids_exact_to_cpu": true,
+    "receipt": {
+      "backend": "hip-prefilter+cpu-exact-ranking",
+      "committed_backend": "hip",
+      "cpu_exact_finalize_seconds": 0.6473044109998227,
+      "cpu_ranked_ids_sha256": "c83e2caff9da42d96e2f1afd340d6716731c632316c1887b940e838eb9389260",
+      "cpu_reference_seconds": 0.6783236049996049,
+      "executable_sha256": "85ea51f184758c83d18b0d1a848330a74c4460d98b96b04c4e78277473b1c063",
+      "hip_ranked_ids_sha256": "c83e2caff9da42d96e2f1afd340d6716731c632316c1887b940e838eb9389260",
+      "index_sha256": "9eeb5490eb6abd32fc28115deda02f039f536883ed05932b86908c3678a1ccfc",
+      "input_export_seconds": 1.1692650620007043,
+      "kernel": {
+        "allocated_vram_bytes": 12464264,
+        "architecture": "gfx1100",
+        "candidate_triangles": 612510,
+        "device_to_host_seconds": 7.8498e-05,
+        "host_to_device_seconds": 0.041517099,
+        "kernel_seconds": 0.00023695,
+        "kind": "tripharm-hip-production-prefilter",
+        "matched_molecules": 114,
+        "molecule_count": 806,
+        "query_triangles": 64,
+        "schema_version": "1.0"
+      },
+      "kind": "protbind.tripharm-hip-query-receipt",
+      "prefilter_molecule_count": 114,
+      "query_features_sha256": "de610a2f1786fada431ee5ab47a92b659a0a42cc2cc945e1a9506aa06a25ce6d",
+      "query_triangle_count": 64,
+      "ranked_molecule_ids_exact": true,
+      "schema_version": "1.0",
+      "score_semantics": "geometric pharmacophore match; not binding affinity",
+      "tolerance_angstrom": 1.0,
+      "top_k": 819,
+      "triangle_count": 612510
+    },
+    "status": "COMPLETED",
+    "wall_seconds": 2.710784287000024
+  }
+}

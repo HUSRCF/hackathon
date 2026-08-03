@@ -1,0 +1,154 @@
+{
+  "claim_boundary": "retrospective experimental-label retrieval; not binding affinity, prospective hit validation, or an end-to-end GPU speedup claim",
+  "cross_engine": {
+    "feature_semantics_warning": "Pharmer SMARTS and RDKit BaseFeatures are independent feature perception implementations; hit-set disagreement is not solely a search-kernel error measure",
+    "hit_set_jaccard": 0.0,
+    "intersection_count": 0,
+    "union_count": 25
+  },
+  "dataset": {
+    "name": "DUD-E",
+    "split": "AMPC pilot full"
+  },
+  "inputs": {
+    "index_sha256": "e9342fe47db97626c0995690dc68f7c0feed91c58e626a5ce33b8da70b876de5",
+    "labels_sha256": "69a346f40f746fcd2292c19444661f902070d5701bade1301fab3e048d441307",
+    "pharmer_hit_sha256": {
+      "pharmer3-hits.sdf": "c56a2e7b5035d767638499afdedbd6c0231c1c456444a0e56510dccc2fa70d2f"
+    },
+    "query_sha256": "ef05f4ad1e18a0f17ee25a8f73f9b459c4db59982807c8f255e8504e826bed3d"
+  },
+  "kind": "protbind.three-way-pharmacophore-screen",
+  "pharmer_cpu": {
+    "conformer_hit_count": 5,
+    "metrics": {
+      "active_retrieved_total": 0,
+      "active_total": 62,
+      "cutoffs": {
+        "0.010000": {
+          "cutoff": 30,
+          "retrieved": 5,
+          "status": "INCOMPLETE",
+          "true_positives": 0
+        },
+        "0.050000": {
+          "cutoff": 149,
+          "retrieved": 5,
+          "status": "INCOMPLETE",
+          "true_positives": 0
+        }
+      },
+      "hit_set": {
+        "enrichment_factor": 0.0,
+        "precision": 0.0,
+        "recall": 0.0
+      },
+      "library_size": 2964,
+      "ranked_count": 5
+    },
+    "parent_hit_count": 5,
+    "provenance": {
+      "container": "docker.io/dkoes/pharmit:latest",
+      "image_digest": "sha256:3a44f86d00bdb1fc196dd8beb996602ecbf315551c4da30667d3705c9088cfb1",
+      "implementation": "Pharmit backend carrying Pharmer",
+      "license": "GPL-2.0-or-later external process",
+      "source_revision": "1904ebc2f5a9f886c5fd276d360545f9cc1c8a5d"
+    },
+    "query_count": 1,
+    "ranking": "descending triangle-query coverage, best RMSD, parent ID"
+  },
+  "receipt_sha256": "3f98f5d1a08ea64ff492a74a17cadd75010ae2026904e02973947b7e2bd73df3",
+  "schema_version": "1.0",
+  "tripharm_cpu": {
+    "metrics": {
+      "active_retrieved_total": 3,
+      "active_total": 62,
+      "cutoffs": {
+        "0.010000": {
+          "cutoff": 30,
+          "retrieved": 20,
+          "status": "INCOMPLETE",
+          "true_positives": 3
+        },
+        "0.050000": {
+          "cutoff": 149,
+          "retrieved": 20,
+          "status": "INCOMPLETE",
+          "true_positives": 3
+        }
+      },
+      "hit_set": {
+        "enrichment_factor": 7.170967741935484,
+        "precision": 0.15,
+        "recall": 0.04838709677419355
+      },
+      "library_size": 2964,
+      "ranked_count": 20
+    },
+    "wall_seconds": 0.028943354999682924
+  },
+  "tripharm_hip": {
+    "metrics": {
+      "active_retrieved_total": 3,
+      "active_total": 62,
+      "cutoffs": {
+        "0.010000": {
+          "cutoff": 30,
+          "retrieved": 20,
+          "status": "INCOMPLETE",
+          "true_positives": 3
+        },
+        "0.050000": {
+          "cutoff": 149,
+          "retrieved": 20,
+          "status": "INCOMPLETE",
+          "true_positives": 3
+        }
+      },
+      "hit_set": {
+        "enrichment_factor": 7.170967741935484,
+        "precision": 0.15,
+        "recall": 0.04838709677419355
+      },
+      "library_size": 2964,
+      "ranked_count": 20
+    },
+    "ranked_ids_exact_to_cpu": true,
+    "receipt": {
+      "backend": "hip-prefilter+cpu-exact-ranking",
+      "committed_backend": "hip",
+      "cpu_exact_finalize_seconds": 0.01942263399996591,
+      "cpu_ranked_ids_sha256": "eefd804db860f26d34d24ee6b68c6046cefaa384ed44f1f554ca02eaa0ee997a",
+      "cpu_reference_seconds": 0.03222238099988317,
+      "executable_sha256": "85ea51f184758c83d18b0d1a848330a74c4460d98b96b04c4e78277473b1c063",
+      "hip_ranked_ids_sha256": "eefd804db860f26d34d24ee6b68c6046cefaa384ed44f1f554ca02eaa0ee997a",
+      "index_sha256": "e9342fe47db97626c0995690dc68f7c0feed91c58e626a5ce33b8da70b876de5",
+      "input_export_seconds": 1.0689072089999172,
+      "kernel": {
+        "allocated_vram_bytes": 11313520,
+        "architecture": "gfx1100",
+        "candidate_triangles": 563902,
+        "device_to_host_seconds": 6.1636e-05,
+        "host_to_device_seconds": 0.043609481,
+        "kernel_seconds": 3.4039e-05,
+        "kind": "tripharm-hip-production-prefilter",
+        "matched_molecules": 20,
+        "molecule_count": 2955,
+        "query_triangles": 1,
+        "schema_version": "1.0"
+      },
+      "kind": "protbind.tripharm-hip-query-receipt",
+      "prefilter_molecule_count": 20,
+      "query_features_sha256": "630e81cf47cb051f9dbd7d493a6714ef943a298ea5b255b2bad90d961eb76905",
+      "query_triangle_count": 1,
+      "ranked_molecule_ids_exact": true,
+      "schema_version": "1.0",
+      "score_semantics": "geometric pharmacophore match; not binding affinity",
+      "tolerance_angstrom": 1.0,
+      "top_k": 2964,
+      "triangle_count": 563902
+    },
+    "status": "COMPLETED",
+    "wall_seconds": 1.3290153269999792
+  }
+}

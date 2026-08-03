@@ -1,0 +1,29 @@
+# ProtBind pitch architecture
+
+A compact judge-facing view of the local-private Agent, deterministic control plane, scientific
+tools, and content-addressed evidence.
+
+```mermaid
+flowchart LR
+    researcher["Researcher<br/>private local data"]
+    agent["HipFire + Qwen<br/>AMD Radeon GPU"]
+    control["Fixed tools + ShadowPlan<br/>approval + stage gates"]
+    science["TriPharm HIP | Docking | Validation<br/>Literature | DrutAI | Assays"]
+    evidence["SHA-256 artifacts<br/>receipts + bounded report"]
+    public["Approved public IDs"]
+
+    researcher --> agent
+    agent --> control
+    public -. "exact-domain approval" .-> control
+    control --> science
+    science --> evidence
+
+    classDef input fill:#ECFDF5,stroke:#10B981,color:#111827,stroke-width:2px;
+    classDef compute fill:#EFF6FF,stroke:#2563EB,color:#111827,stroke-width:2px;
+    classDef controlNode fill:#F5F3FF,stroke:#7C3AED,color:#111827,stroke-width:2px;
+    classDef output fill:#FFF7ED,stroke:#EA580C,color:#111827,stroke-width:2px;
+    class researcher,public input;
+    class agent,science compute;
+    class control controlNode;
+    class evidence output;
+```

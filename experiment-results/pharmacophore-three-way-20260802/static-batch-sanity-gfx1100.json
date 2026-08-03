@@ -1,0 +1,108 @@
+{
+  "cold": {
+    "backend": "hip-static-resident-batch-prefilter+cpu-exact-ranking",
+    "batch_process_seconds": 0.1283377650033799,
+    "committed_backend": "hip",
+    "cpu_exact_finalize_seconds": 0.0043247819994576275,
+    "cpu_ranked_ids_sha256": "3e7fb9fd5bddd76027958427bf4895b9e1ae393a9d236e6bdd3f07e850947499",
+    "cpu_ranked_scores_sha256": "9c44ce79dfc7994ec7e5caf14bd7fcea5238b7332b442b0e227a8f9bba0bccd7",
+    "cpu_reference_scope": "measured_inline",
+    "cpu_reference_seconds": 0.004502563999267295,
+    "executable_sha256": "5dcb2869c5e93926a20a798be315432fcc661d57717df72279dae7b3f9e8553d",
+    "hip_ranked_ids_sha256": "3e7fb9fd5bddd76027958427bf4895b9e1ae393a9d236e6bdd3f07e850947499",
+    "hip_ranked_scores_sha256": "9c44ce79dfc7994ec7e5caf14bd7fcea5238b7332b442b0e227a8f9bba0bccd7",
+    "index_sha256": "67acfc4eb1d8c2118c7b6e0ff03ca21b14578fe5e2a997d0aabf6343fd988f92",
+    "kernel": {
+      "allocated_vram_bytes": 348,
+      "architecture": "gfx1100",
+      "batch_queries": 2,
+      "candidate_triangles": 8,
+      "device_to_host_seconds": 5.0417e-05,
+      "host_to_device_seconds": 0.029210713,
+      "kernel_seconds": 0.000726378,
+      "kind": "tripharm-hip-static-resident-batch-prefilter",
+      "molecule_count": 2,
+      "query_triangles": 8,
+      "schema_version": "1.0"
+    },
+    "kind": "protbind.tripharm-hip-static-batch-query-receipt",
+    "prefilter_molecule_counts": [
+      2,
+      2
+    ],
+    "query_features_sha256": [
+      "3c0e109f91683402838007a5233e1a098b699c6988e0116e7c3e7c1bfa8d0646",
+      "63210d20136f215432dcd2942f82f1aae38061e63cd5367e8ce6f39b3a54a686"
+    ],
+    "query_payload_sha256": "3a42ae43cd20fe64cc5ac4f5a3ff47f24fb95b568d3b2d1d8413909654e0eacf",
+    "query_triangle_counts": [
+      4,
+      4
+    ],
+    "ranked_molecule_ids_exact": true,
+    "receipt_sha256": "9ce73da66c196504b8d74e776ddd530a0998eabdd25037604562a23443feaf43",
+    "schema_version": "1.0",
+    "score_semantics": "geometric pharmacophore match; not binding affinity",
+    "static_cache_hit": false,
+    "static_cache_key": "366c588c44992412434b809b2f876f9c847a564ba49bb194a72e7b609073e0b3",
+    "static_export_seconds": 0.0018515979973017238,
+    "static_index_sha256": "9ac94d748c65efa9dc38ec53c4465d30b7f8d5eb609cc98560767839fa865e5c",
+    "static_prepare_seconds": 0.0018515979973017238,
+    "tolerance_angstrom": 1.0,
+    "top_k": 2,
+    "triangle_count": 8
+  },
+  "warm": {
+    "backend": "hip-static-resident-batch-prefilter+cpu-exact-ranking",
+    "batch_process_seconds": 0.12845500099501805,
+    "committed_backend": "hip",
+    "cpu_exact_finalize_seconds": 0.0042454700014786795,
+    "cpu_ranked_ids_sha256": "3e7fb9fd5bddd76027958427bf4895b9e1ae393a9d236e6bdd3f07e850947499",
+    "cpu_ranked_scores_sha256": "9c44ce79dfc7994ec7e5caf14bd7fcea5238b7332b442b0e227a8f9bba0bccd7",
+    "cpu_reference_scope": "measured_inline",
+    "cpu_reference_seconds": 0.004269776996807195,
+    "executable_sha256": "5dcb2869c5e93926a20a798be315432fcc661d57717df72279dae7b3f9e8553d",
+    "hip_ranked_ids_sha256": "3e7fb9fd5bddd76027958427bf4895b9e1ae393a9d236e6bdd3f07e850947499",
+    "hip_ranked_scores_sha256": "9c44ce79dfc7994ec7e5caf14bd7fcea5238b7332b442b0e227a8f9bba0bccd7",
+    "index_sha256": "67acfc4eb1d8c2118c7b6e0ff03ca21b14578fe5e2a997d0aabf6343fd988f92",
+    "kernel": {
+      "allocated_vram_bytes": 348,
+      "architecture": "gfx1100",
+      "batch_queries": 2,
+      "candidate_triangles": 8,
+      "device_to_host_seconds": 4.9124e-05,
+      "host_to_device_seconds": 0.0315401,
+      "kernel_seconds": 0.000410839,
+      "kind": "tripharm-hip-static-resident-batch-prefilter",
+      "molecule_count": 2,
+      "query_triangles": 8,
+      "schema_version": "1.0"
+    },
+    "kind": "protbind.tripharm-hip-static-batch-query-receipt",
+    "prefilter_molecule_counts": [
+      2,
+      2
+    ],
+    "query_features_sha256": [
+      "3c0e109f91683402838007a5233e1a098b699c6988e0116e7c3e7c1bfa8d0646",
+      "63210d20136f215432dcd2942f82f1aae38061e63cd5367e8ce6f39b3a54a686"
+    ],
+    "query_payload_sha256": "3a42ae43cd20fe64cc5ac4f5a3ff47f24fb95b568d3b2d1d8413909654e0eacf",
+    "query_triangle_counts": [
+      4,
+      4
+    ],
+    "ranked_molecule_ids_exact": true,
+    "receipt_sha256": "7009157cb9530b0a2c490ccdc10a3f87fb64454331e1c77e66814c71c1ba8d51",
+    "schema_version": "1.0",
+    "score_semantics": "geometric pharmacophore match; not binding affinity",
+    "static_cache_hit": true,
+    "static_cache_key": "366c588c44992412434b809b2f876f9c847a564ba49bb194a72e7b609073e0b3",
+    "static_export_seconds": 0.0,
+    "static_index_sha256": "9ac94d748c65efa9dc38ec53c4465d30b7f8d5eb609cc98560767839fa865e5c",
+    "static_prepare_seconds": 0.000792302998888772,
+    "tolerance_angstrom": 1.0,
+    "top_k": 2,
+    "triangle_count": 8
+  }
+}

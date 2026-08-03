@@ -1,4 +1,4 @@
-# Experiment artifact manifest — updated 2026-07-27
+# Experiment artifact manifest — updated 2026-08-03
 
 | Relative artifact | SHA-256 | Interpretation |
 |---|---|---|
@@ -61,14 +61,48 @@
 | `refine-logs/EXPERIMENT_RESULTS_20260723_AIAA_QUICK_VINA.md` | `bc3ac86902a5b3398b66b6b1d0fd291198b034c0fd8ca97dc299fef1aa270d93` | Historical v1 automatic-selection/direct-adapter smoke report |
 | `refine-logs/EXPERIMENT_RESULTS_20260723_AIAA_QUICK_VINA_V2.md` | `1169bce598890a822b0addf7e7a01b38d81ca89a46cbf0b251c6bb6b2a2fcc52` | Historical timestamped v2 report: direct adapter PASS plus host-blocked production attempt |
 | `refine-logs/EXPERIMENT_RESULTS_20260723_AIAA_QUICK_VINA_V3.md` | `19baac13ae6cab3d30f54385ef8a511c46d602e993f083fda9a169ee753e4dc2` | Current timestamped v3 report: box-bound direct PASS plus host-blocked production isolation |
-| `README.md` | `41e643c6c2555e2c81f13986f2faec425993f27a46bcf890899d206caeebdcae` | Current runnable overview and original/v1/v2 fixed-ten claim boundary |
-| `DOCs/PROTBIND_AGENT_WORKFLOW.md` | `235413aa13ea26af25b1562c47500d31b3730dbb129c5cc7ccbfae06d9b9556d` | Current deterministic Agent workflow and restrained-side-chain validation semantics |
-| `DOCs/PROTBIND_PRIVATE_RESEARCH_AGENT_PLAN.md` | `e050313d465eb8ea7a2bcd9fad2c84fa6d8cfab61fe6af3b803a6e35aead8a2e` | Current implementation/acceptance plan with original, v1 and v2 result boundaries |
+| `README.md` | `5c44325fb47da2892cfb03a65547fd3b109473910da29c9e6ed3db183a963a2d` | Current runnable overview with English judge quick start, fixed-ten boundaries, frozen TriPharm aggregate, optional DrutAI and experimental-data commands |
+| `DOCs/PROTBIND_LIBRARY_AND_EXTERNAL_PREDICTORS.md` | `71a2d544dda01e27f318a3e11434071ad63e759d8fef2aad7e073abf6c155d99` | External-predictor admission boundary, including optional GPL-weight DrutAI acquisition, Snap isolation audit and supportive-only interpretation |
+| `.agents/skills/protbind-research/references/tool-contracts.md` | `7513ce85286b4b65fb0158061448862901dd6d1dcbe30c61626f5968fce5cdd4` | Agent-facing fixed tool contracts for DrutAI and append-only experimental data operations |
+| `src/protbind_agent/drutai.py` | `d72757ab52cd880567f2133e4dc52c19fafa071cfc7d0bd3e0b7ff80388fdc45` | MIT-licensed optional isolated DrutAI adapter with pinned acquisition, hash verification, Snap audit and supportive-only annotations |
+| `LICENSES/ProtBind-DrutAI-adapter-MIT.txt` | `355d3fb6c1e29adef194f9f48cdfe403d84ef5fc54f4057bc9416537e94a6f4e` | File-scoped MIT grant for the independently handwritten adapter; explicitly excludes weights and upstream artifacts |
+| `src/protbind_agent/experimental_assays.py` | `7b5781e0063bfd339f20c421db0767bfd26451dc3cb194221680fa58ac38a0dc` | Append-only experimental import/catalog and explicit deterministic curve-fit substrate |
+| `.agents/skills/protbind-drutai/SKILL.md` | `7b835331f2361a9737570888b7606073bbe763782ba2694413f35d47ce10242b` | DrutAI operation skill preserving license, approval, runtime-isolation and scientific-claim boundaries |
+| `.agents/skills/protbind-assay-data/SKILL.md` | `fb324413e1c583eb279fbfa4da0511914ffa8f3cb3c57030fcd2e707a31bd252` | Experimental-data skill for approved import, listing and deterministic fitting |
+| `tests/test_drutai.py` | `7d97051a259a7993896686cb032a058e95ecfab74dfe0432af0aa67cfdc0363f` | DrutAI acquisition, identity validation, output mapping, Snap isolation and fail-closed tests |
+| `refine-logs/EXPERIMENT_RESULTS_20260803_DRUTAI_SNAP_SMOKE.md` | `efec19a86db70c496f765c2eb18c2b7f6c4131c24bd08f2ebd5ab511f67db2cd` | One-record synthetic Snap runtime smoke with strict-confinement and interface-audit receipts; no biological claim |
+| `submission/PROJECT_SPECIFICATION.md` | `8de77d61de4e66abdd64bd4262d570961ec5e580557fa297cd741d62616e0d47` | English Track-2 specification source with architecture, Radeon evidence, scientific limits and deployment plan |
+| `submission/PROJECT_SPECIFICATION.pdf` | `2c7835df9029de37db0c0aa560d644c95301f17a241db05975dd1b99c7e0bc6a` | Six-page visually inspected Project Specification PDF with generic ProtBind Team metadata |
+| `submission/ProtBind_Pitch_Deck.pptx` | `302e6dc6e4335a4569db520ac915726e7172512ca882b4f90bb0ad0676a50aa1` | Nine-slide editable and visually inspected English pitch deck |
+| `submission/REPRODUCIBILITY.md` | `a9e5aa3e2e5aceb318be5febf319ffd09d47ea99b6bbdeb16a53484b08d8d4d2` | English environment, HIP build, test, smoke and local-Agent reproduction guide |
+| `submission/CLAIM_MATRIX.md` | `a7334ce69f07c0496344bdf121089374d738c23f4f1a537cfa23c662ac0cfd87` | Competition-facing supported/unsupported/not-evaluated claim matrix |
+| `submission/DEMO_SCRIPT.md` | `8969c27ed51340d90b4272369dbb655c36ef5036e459a70073471c7287794337` | Four-and-a-half-minute Radeon execution shot list and privacy checklist |
+| `submission/PITCH_DECK.md` | `4bcb5399a18ee1e1d2e4c614c3e232840e32381ab3758b5297e521a12eb333fd` | Editable English pitch-deck source |
+| `submission/PR_BODY.md` | `8fa8d052ad799a784e5ab14274c273487b9885a45014afe9462c2a272f6ca620` | English official-PR body template with explicit human placeholders |
+| `submission/SUBMISSION_CHECKLIST.md` | `1bc9a607675d235d15b305d3787abde23b52cd8a845901ba7cb3ef73a763bd7d` | Deadline-oriented eligibility, deliverable, PR, evidence and licensing checklist |
+| `submission/GAP_AUDIT.md` | `e238f706ef6334adfd7867e3b03f795e7793e51ea18c5112d9cdc0cdd0e449dd` | Prioritized clean-commit, video, eligibility, IP, Agent A/B and non-goal audit |
+| `figures/protbind-system-architecture.mmd` | `d4ae5c28d9e1efa166215244dec1c4d2be66a9d15ead4d73a5159f26c38dfba1` | Verified full architecture Mermaid source |
+| `figures/protbind-system-architecture.md` | `317f976f0da6c360b68760e1e4eb5fd62b6f28e6b8b3be5a9a073bffe737b36f` | Markdown preview of the full architecture diagram |
+| `figures/protbind-system-architecture.png` | `1c43f15aec914b37999b54039d7e08bfe1fd95441d3f6c6d5d8a9419965ac609` | Visually inspected portrait architecture used in the specification |
+| `figures/protbind-pitch-architecture.mmd` | `dd38694e13466e56c73b5793f9a4876d5ae7c7453ee959d663152a38b15d0c4f` | Verified compact judge-facing Mermaid source |
+| `figures/protbind-pitch-architecture.md` | `2c7795d74303ab515d6f0c01338c668b59095ad546d59d1d065d0ca385642bd5` | Markdown preview of the compact pitch architecture |
+| `figures/protbind-pitch-architecture.png` | `2d154a4b3a8d83383f723d9ff29e268932b787c024a77184681676eb0937d8db` | Visually inspected landscape architecture used in the pitch deck |
+| `tests/test_experimental_assays.py` | `fe1d591afdd593279f2753d6860ed497319deae789239e0dede8e3a1ac0e0b42` | Experimental preview/commit, append-only catalog and curve-fit tests |
+| `opencode.json` | `024c2744b18d6d1fa825709b8664101b56761a932f817b4693be8ec718114aa4` | OpenCode permission registration for the two new skills and sensitive tools |
+| `DOCs/PROTBIND_AGENT_WORKFLOW.md` | `ed6b7f4d0df0b4a87206efd8c9a56db473fd07dd1065a32813ab6ec7922fc5d7` | Current deterministic Agent workflow and restrained-side-chain validation semantics |
+| `DOCs/PROTBIND_PRIVATE_RESEARCH_AGENT_PLAN.md` | `d9f8da4765fd11de0c8fb868dc5b95890131f3adc7b6df38271c23eb3176f54d` | Current implementation/acceptance plan with original, v1 and v2 result boundaries |
 | `refine-logs/EXPERIMENT_RESULTS_20260725_SCIENTIFIC_GAPS.md` | `2cc5dec238a1dc36e2a2374cfb9a0d69008b8ea450c2365da71ada92102d0b86` | Timestamped fixed-ten, repair, calibration and v4 scientific-gap report |
 | `refine-logs/EXPERIMENT_RESULTS_20260726_REPAIR_PROTOCOL_V1.md` | `5f988950f0ac1aeb1d1400cb2455c6d14d857b8697979ee934a2c2774485bbbe` | Timestamped revision freeze, per-case metrics, repair receipts and claim boundary |
 | `refine-logs/EXPERIMENT_RESULTS_20260727_RESTRAINED_SIDECHAIN_V2.md` | `000aca5255fd3a9b2264f9f3cedc9a4adf020a4337a2944457b4c874745702bd` | Timestamped v2 protocol, per-case results, constrained-geometry receipts and claim boundary |
 | `refine-logs/EXPERIMENT_RESULTS.md` | `2b963752be26b51e8f57a57ee4a70d6df061bda931f917556a7c72ffc242db1c` | Current concise handoff; original 7/10, v1 8/10 and v2 9/10 are separate |
-| `refine-logs/EXPERIMENT_TRACKER.md` | `b0f7425c01773c2960fe3a561a52aeffa4d17971c96f48bc72e133280ca8944f` | Current gate tracker; v2 mechanical science gate complete, prospective and production-isolation work remain |
+| `refine-logs/EXPERIMENT_PLAN_20260802_TRIPHARM_THREE_GATES.md` | `f5173446cc07b847d2ab7baf935590cd637550219ead7c3f2d241baced078331` | Timestamped claim-driven plan for prospective science, fair baselines, and persistent HIP acceleration |
+| `refine-logs/EXPERIMENT_PLAN.md` | `7cda3714a167698a4e9608523cb5faf2f3ad4ed4f1a8f409ec86ba7f4149908c` | Stable entry point for the current TriPharm three-gate plan |
+| `refine-logs/EXPERIMENT_TRACKER_20260802_TRIPHARM_THREE_GATES.md` | `67e06222b6d492e24193f4942130dbef406166c693774afc7fdf274f090389de` | Completed three-target tracker; break-even prefixes and R9700 remain open |
+| `refine-logs/EXPERIMENT_TRACKER.md` | `9e738302a04e6d22b763e37252df411168166fc2f1f6fb8719678733486c1741` | Current global tracker with completed frozen TriPharm validation, Agent/DrutAI/assay status and 454-test QA |
+| `DOCs/PROTBIND_PHARMER_THREE_WAY_BENCHMARK.md` | `665b0d34bd83c7c2a5d1b6a35186765b505c8f2c48558547a8e2f97f671b2250` | Pharmer/CPU/HIP results, bounded claims and 30-repeat static prefilter timings |
+| `experiment-results/pharmacophore-three-way-20260802/prospective-three-target-aggregate-v1.json` | `6dd425a9f9bba8a151fa6d6ac80b52e18ffac614776351c33a31d134eee77394` | Self-bound three-target aggregate; internal aggregate SHA is `5ac3a9ca...362d` |
+| `scripts/summarize-prospective-three-way.py` | `6ef67e61e87b15bad0e2600dcc1585bc0563257ef7ae6b00dbbafc7ede815403` | Deterministic aggregate builder and frozen gate evaluator |
+| `scripts/benchmark-tripharm-static-kernel.py` | `15e8913ba2bb7e8f5adaf4ade58a5b275184855eb3f606b0e26d0d5da57f9064` | Static HIP prefilter 5-warmup/30-repeat benchmark runner |
 
 Runtime identities:
 

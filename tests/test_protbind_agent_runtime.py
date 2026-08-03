@@ -40,6 +40,13 @@ def test_builtin_tools_are_a_fixed_in_process_allowlist(tmp_path) -> None:
 
     assert names == {
         "doctor",
+        "drutai_status",
+        "drutai_model_acquire",
+        "drutai_annotate",
+        "experiment_import_preview",
+        "experiment_import_commit",
+        "experiment_list",
+        "experiment_fit_curve",
         "case_status",
         "case_report",
         "case_dossier",

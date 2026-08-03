@@ -19,6 +19,8 @@ from .dossier import (
     dossier_content,
     persist_run_dossier,
 )
+from .drutai import DrutAIManager
+from .experimental_assays import ExperimentalAssayStore
 from .knowledge import (
     SeekDBKnowledgeStore,
     extract_document_bytes,
@@ -116,6 +118,19 @@ class ProtBindMCPService:
             raise FileNotFoundError(f"{name} does not exist: {raw.name}")
         return path
 
+    def _project_directory(self, value: str, name: str) -> Path:
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError(f"{name} must be a non-empty project-relative path")
+        raw = Path(value)
+        if raw.is_absolute():
+            raise ValueError(f"{name} must be project-relative")
+        path = (self.project_root / raw).resolve()
+        if not path.is_relative_to(self.project_root):
+            raise ValueError(f"{name} escapes the configured project root")
+        if not path.is_dir():
+            raise FileNotFoundError(f"{name} does not exist: {raw.name}")
+        return path
+
     def _validate_nested_case_paths(self, value: Any) -> None:
         if isinstance(value, dict):
             for key, item in value.items():
@@ -136,7 +151,115 @@ class ProtBindMCPService:
     def doctor(self) -> dict[str, Any]:
         """Return path-free local capability and Radeon admission evidence."""
 
-        return doctor_report()
+        report = doctor_report()
+        report["runtime_details"]["drutai_workspace"] = DrutAIManager(
+            self.workspace
+        ).status()
+        return report
+
+    def drutai_status(self) -> dict[str, Any]:
+        """Return path-free optional model and scientific-admission state."""
+
+        return DrutAIManager(self.workspace).status()
+
+    def drutai_model_acquire(
+        self,
+        *,
+        model: str,
+        approved_domain: str,
+        license_acknowledgement: str,
+        replace: bool = False,
+    ) -> dict[str, Any]:
+        """Acquire one fixed-commit ONNX model after explicit GPL acknowledgement."""
+
+        return DrutAIManager(self.workspace).acquire_model(
+            model=model,
+            approved_domain=approved_domain,
+            license_acknowledgement=license_acknowledgement,
+            replace=replace,
+        )
+
+    def drutai_annotate(
+        self,
+        *,
+        input_path: str,
+        fasta_directory: str,
+        model: str,
+        data_access_confirmed: bool,
+        threads: int | None = None,
+        batch_size: int = 2000,
+        abstention_margin: float = 0.05,
+    ) -> dict[str, Any]:
+        """Run a network-isolated, non-decisional DrutAI annotation."""
+
+        self._require_data_access_confirmation(data_access_confirmed)
+        return DrutAIManager(self.workspace).annotate(
+            input_tsv=self._project_file(input_path, "input_path"),
+            fasta_directory=self._project_directory(
+                fasta_directory, "fasta_directory"
+            ),
+            model=model,
+            data_access_confirmed=True,
+            threads=threads,
+            batch_size=batch_size,
+            abstention_margin=abstention_margin,
+        )
+
+    def experiment_import_preview(
+        self,
+        *,
+        source_path: str,
+        data_access_confirmed: bool,
+    ) -> dict[str, Any]:
+        """Validate a private assay table and return a non-mutating hash-bound plan."""
+
+        self._require_data_access_confirmation(data_access_confirmed)
+        return ExperimentalAssayStore(self.workspace).preview_import(
+            self._project_file(source_path, "source_path")
+        )
+
+    def experiment_import_commit(
+        self,
+        *,
+        source_path: str,
+        plan_id: str,
+        data_access_confirmed: bool,
+    ) -> dict[str, Any]:
+        """Commit the exact previewed assay table to immutable artifacts and catalog."""
+
+        self._require_data_access_confirmation(data_access_confirmed)
+        return ExperimentalAssayStore(self.workspace).commit_import(
+            self._project_file(source_path, "source_path"),
+            plan_id=plan_id,
+            data_access_confirmed=True,
+        )
+
+    def experiment_list(
+        self,
+        *,
+        data_access_confirmed: bool,
+        limit: int = 100,
+    ) -> dict[str, Any]:
+        """List private experiment metadata without returning measurements."""
+
+        self._require_data_access_confirmation(data_access_confirmed)
+        return ExperimentalAssayStore(self.workspace).list_experiments(limit=limit)
+
+    def experiment_fit_curve(
+        self,
+        *,
+        experiment_id: str,
+        model: str,
+        data_access_confirmed: bool,
+    ) -> dict[str, Any]:
+        """Fit one explicitly selected deterministic model and persist its receipt."""
+
+        self._require_data_access_confirmation(data_access_confirmed)
+        return ExperimentalAssayStore(self.workspace).fit_curve(
+            experiment_id=experiment_id,
+            model=model,
+            data_access_confirmed=True,
+        )
 
     def case_create(
         self,
@@ -609,6 +732,25 @@ def create_mcp_server(service: ProtBindMCPService) -> Any:
     )
 
     server.tool(name="doctor", structured_output=True)(service.doctor)
+    server.tool(name="drutai_status", structured_output=True)(service.drutai_status)
+    server.tool(name="drutai_model_acquire", structured_output=True)(
+        service.drutai_model_acquire
+    )
+    server.tool(name="drutai_annotate", structured_output=True)(
+        service.drutai_annotate
+    )
+    server.tool(name="experiment_import_preview", structured_output=True)(
+        service.experiment_import_preview
+    )
+    server.tool(name="experiment_import_commit", structured_output=True)(
+        service.experiment_import_commit
+    )
+    server.tool(name="experiment_list", structured_output=True)(
+        service.experiment_list
+    )
+    server.tool(name="experiment_fit_curve", structured_output=True)(
+        service.experiment_fit_curve
+    )
     server.tool(name="fetch_public_data", structured_output=True)(
         service.fetch_public_data
     )

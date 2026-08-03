@@ -130,6 +130,35 @@ def test_mcp_public_fetch_rejects_output_before_network(tmp_path) -> None:
         )
 
 
+def test_mcp_drutai_status_is_read_only_and_path_free(tmp_path) -> None:
+    service = ProtBindMCPService(
+        workspace=tmp_path / "workspace",
+        project_root=tmp_path,
+    )
+
+    result = service.drutai_status()
+
+    assert result["enabled_by_default"] is False
+    assert result["weights_distributed_by_protbind"] is False
+    assert result["hard_filter_allowed"] is False
+    assert str(tmp_path) not in json.dumps(result)
+
+
+def test_mcp_drutai_private_annotation_requires_fresh_confirmation(tmp_path) -> None:
+    service = ProtBindMCPService(
+        workspace=tmp_path / "workspace",
+        project_root=tmp_path,
+    )
+
+    with pytest.raises(PermissionError, match="fresh explicit user confirmation"):
+        service.drutai_annotate(
+            input_path="missing.tsv",
+            fasta_directory="missing-fasta",
+            model="convmixer64",
+            data_access_confirmed=False,
+        )
+
+
 def test_mcp_library_reads_require_explicit_data_confirmation(tmp_path) -> None:
     service = ProtBindMCPService(
         workspace=tmp_path / "workspace",
@@ -186,6 +215,13 @@ def test_mcp_server_exposes_only_bounded_domain_tools(tmp_path) -> None:
 
     assert tool_names == {
         "doctor",
+        "drutai_status",
+        "drutai_model_acquire",
+        "drutai_annotate",
+        "experiment_import_preview",
+        "experiment_import_commit",
+        "experiment_list",
+        "experiment_fit_curve",
         "fetch_public_data",
         "case_create",
         "case_status",

@@ -336,6 +336,12 @@ class ProtBindAgentTools:
                 self._handler("doctor", self.service.doctor),
             ),
             ToolSpec(
+                "drutai_status",
+                "Return optional DrutAI model, license, and scientific-admission state.",
+                _object({}),
+                self._handler("drutai_status", self.service.drutai_status),
+            ),
+            ToolSpec(
                 "case_status",
                 "Deep-audit one run and return its fresh one-stage continuation gate.",
                 _object(run, required=("run_id",)),
@@ -398,6 +404,168 @@ class ProtBindAgentTools:
             ),
         )
         confirmed = (
+            ToolSpec(
+                "drutai_model_acquire",
+                "Acquire one fixed-commit GPL DrutAI ONNX model after acknowledgement.",
+                _object(
+                    {
+                        "model": _string(maximum=64),
+                        "approved_domain": _string(maximum=253),
+                        "license_acknowledgement": _string(maximum=64),
+                        "replace": {"type": "boolean"},
+                    },
+                    required=(
+                        "model",
+                        "approved_domain",
+                        "license_acknowledgement",
+                    ),
+                ),
+                self._handler(
+                    "drutai_model_acquire",
+                    self.service.drutai_model_acquire,
+                    preview=self._preview(
+                        "drutai_model_acquire",
+                        reads=("fixed DrutAI model catalog and GPL-3.0 warning",),
+                        writes=("private third-party model cache and acquisition receipt",),
+                        network="raw.githubusercontent.com at a fixed Git commit",
+                        recovery=(
+                            "Hash-mismatched or partial weights are rejected; no model "
+                            "becomes scientifically accepted."
+                        ),
+                    ),
+                ),
+                SideEffect.EXTERNAL,
+            ),
+            ToolSpec(
+                "drutai_annotate",
+                "Run optional sequence-SMILES annotation; never hard-filter candidates.",
+                _object(
+                    {
+                        "input_path": _string(maximum=1000),
+                        "fasta_directory": _string(maximum=1000),
+                        "model": _string(maximum=64),
+                        "threads": {"type": "integer"},
+                        "batch_size": {"type": "integer"},
+                        "abstention_margin": {"type": "number"},
+                    },
+                    required=("input_path", "fasta_directory", "model"),
+                ),
+                self._handler(
+                    "drutai_annotate",
+                    self.service.drutai_annotate,
+                    preview=self._preview(
+                        "drutai_annotate",
+                        reads=(
+                            "one project-local private TSV",
+                            "target FASTA files",
+                            "one acquired third-party ONNX model",
+                        ),
+                        writes=("content-addressed raw output and annotation receipt",),
+                        network="none; worker executes in an OS-isolated network namespace",
+                        recovery=(
+                            "Invalid inputs, worker errors, or output identity mismatches "
+                            "produce no candidate decision."
+                        ),
+                    ),
+                    inject_data_confirmation=True,
+                ),
+                SideEffect.LOCAL_WRITE,
+            ),
+            ToolSpec(
+                "experiment_import_preview",
+                "Validate a private assay table and freeze a non-mutating import plan.",
+                _object(
+                    {"source_path": _string(maximum=1000)},
+                    required=("source_path",),
+                ),
+                self._handler(
+                    "experiment_import_preview",
+                    self.service.experiment_import_preview,
+                    preview=self._preview(
+                        "experiment_import_preview",
+                        reads=("one project-local private assay CSV or TSV",),
+                        writes=(),
+                        recovery="No database or artifact write is performed by preview.",
+                    ),
+                    inject_data_confirmation=True,
+                ),
+            ),
+            ToolSpec(
+                "experiment_import_commit",
+                "Commit an exact hash-bound assay import plan; never overwrite an experiment.",
+                _object(
+                    {
+                        "source_path": _string(maximum=1000),
+                        "plan_id": _string(maximum=64),
+                    },
+                    required=("source_path", "plan_id"),
+                ),
+                self._handler(
+                    "experiment_import_commit",
+                    self.service.experiment_import_commit,
+                    preview=self._preview(
+                        "experiment_import_commit",
+                        reads=("the assay source bound by the reviewed plan",),
+                        writes=(
+                            "immutable raw/canonical artifacts and append-only experiment catalog",
+                        ),
+                        recovery=(
+                            "A stale plan or duplicate experiment is rejected; no history "
+                            "is overwritten."
+                        ),
+                    ),
+                    inject_data_confirmation=True,
+                ),
+                SideEffect.LOCAL_WRITE,
+            ),
+            ToolSpec(
+                "experiment_list",
+                "List private experiment metadata without returning measurement values.",
+                _object({"limit": {"type": "integer"}}),
+                self._handler(
+                    "experiment_list",
+                    self.service.experiment_list,
+                    preview=self._preview(
+                        "experiment_list",
+                        reads=("private experiment catalog metadata",),
+                        writes=(),
+                    ),
+                    inject_data_confirmation=True,
+                ),
+            ),
+            ToolSpec(
+                "experiment_fit_curve",
+                "Fit one declared deterministic assay model and persist a cited receipt.",
+                _object(
+                    {
+                        "experiment_id": _string(maximum=256),
+                        "model": _string(
+                            enum=(
+                                "four-parameter-logistic",
+                                "one-site-binding",
+                            )
+                        ),
+                    },
+                    required=("experiment_id", "model"),
+                ),
+                self._handler(
+                    "experiment_fit_curve",
+                    self.service.experiment_fit_curve,
+                    preview=self._preview(
+                        "experiment_fit_curve",
+                        reads=("one imported assay revision and its measurements",),
+                        writes=(
+                            "content-addressed deterministic fit receipt and fit catalog row",
+                        ),
+                        recovery=(
+                            "Non-convergence or insufficient data leaves imported "
+                            "measurements unchanged."
+                        ),
+                    ),
+                    inject_data_confirmation=True,
+                ),
+                SideEffect.LOCAL_WRITE,
+            ),
             ToolSpec(
                 "fetch_public_data",
                 "Fetch one public registry identifier after exact-domain confirmation.",

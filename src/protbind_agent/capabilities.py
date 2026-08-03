@@ -91,7 +91,19 @@ def discover_capabilities() -> list[Capability]:
         ("vina", "vina", "reproducible CPU docking", "docking"),
         ("fpocket", "fpocket", "candidate pocket detection", "ligand_only"),
         ("p2rank", "prank", "candidate pocket detection", "ligand_only"),
+        (
+            "drutai",
+            "drutai.predict",
+            "optional sequence-SMILES DTI concordance annotation",
+            "annotation",
+        ),
         ("hipcc", "hipcc", "TriPharm HIP build", "hip-screening"),
+        (
+            "mmseqs",
+            "mmseqs",
+            "local protein homology search and sequence clustering",
+            "homology",
+        ),
     ):
         path = shutil.which(executable)
         source = "path"

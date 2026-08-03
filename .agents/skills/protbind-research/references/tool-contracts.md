@@ -2,8 +2,8 @@
 
 All file arguments are project-relative. The server resolves and bounds them to its configured
 project root. It runs over stdio and exposes no arbitrary command, raw filesystem, URL, or open
-network tool. Its one network-capable method is the bounded identifier-only public registry fetch
-described below.
+network tool. Its network surfaces are the bounded identifier-only public registry fetch and the
+fixed-commit, fixed-host optional DrutAI model acquisition described below.
 
 ## Read-only tools
 
@@ -20,6 +20,8 @@ described below.
 - `protbind_artifact_metadata(artifact_ref_json)`: verify a complete serialized `ArtifactRef` and
   return metadata only.
 - `protbind_control_history(run_id)`: return content-addressed gate/acceptance receipt references.
+- `protbind_drutai_status()`: return path-free model presence, fixed source commitment, license
+  policy, and annotation-only admission state.
 
 Private-library tools are intentionally permissioned as `ask`, including reads. Every call also
 requires `data_access_confirmed=true` after a fresh user confirmation:
@@ -39,6 +41,27 @@ requires `data_access_confirmed=true` after a fresh user confirmation:
   comparison. It never uploads the private sequence.
 
 ## Mutating tools
+
+- `protbind_drutai_model_acquire(model, approved_domain, license_acknowledgement,
+  replace=false)`: fetch exactly one catalogued ONNX file from the pinned DrutAI Git commit. It
+  requires the exact `raw.githubusercontent.com` domain and `GPL-3.0-only` acknowledgement, checks
+  size plus Git blob commitment, records SHA-256, and never attaches the weight to a scientific
+  case.
+- `protbind_drutai_annotate(input_path, fasta_directory, model, data_access_confirmed,
+  threads?, batch_size?, abstention_margin?)`: after fresh private-data approval, validate one
+  project-relative TSV and bounded FASTA directory, then invoke the separate `drutai.predict`
+  executable with cache disabled and OS network isolation. Return content-addressed raw output and
+  annotation bundle references. Results never hard-filter or upgrade evidence.
+- `protbind_experiment_import_preview(source_path, data_access_confirmed)`: validate one private
+  project-local assay CSV/TSV and return a hash-bound plan without database or artifact writes.
+- `protbind_experiment_import_commit(source_path, plan_id, data_access_confirmed)`: reparse the
+  same source, require the exact fresh plan, and append immutable raw/canonical artifacts plus one
+  experiment revision. Duplicate IDs are rejected rather than overwritten.
+- `protbind_experiment_list(data_access_confirmed, limit?)`: return bounded private experiment
+  metadata without measurement values.
+- `protbind_experiment_fit_curve(experiment_id, model, data_access_confirmed)`: fit only the
+  explicitly selected four-parameter logistic or one-site model and persist a deterministic
+  receipt. Fit quality is not binding or mechanism evidence.
 
 - `protbind_fetch_public_data(source, identifier, project_path, approved_domain, run_propka=true,
   replace=false)`: download exactly one whitelisted public registry record using a constructed

@@ -467,6 +467,42 @@ def molecule_to_index_record(
     )
 
 
+def molecule_to_existing_conformer_record(
+    molecule_id: str,
+    molecule: Any,
+    *,
+    original_smiles: str | None,
+    source: str,
+) -> IndexedMolecule:
+    """Build one index record without changing the supplied 3D coordinates.
+
+    This entry point is intentionally separate from ``molecule_to_index_record``:
+    retrospective comparisons against an external 3D search engine must consume
+    the exact same conformer rather than silently generating a new ETKDG ensemble.
+    """
+
+    chem, _, _, _, _ = _rdkit()
+    if molecule.GetNumConformers() != 1 or not molecule.GetConformer().Is3D():
+        raise ValueError(f"molecule {molecule_id} must contain exactly one 3D conformer")
+    parent = _standardize(molecule)
+    if parent.GetNumConformers() != 1 or not parent.GetConformer().Is3D():
+        raise ValueError(f"standardization discarded 3D coordinates for {molecule_id}")
+    original = original_smiles or chem.MolToSmiles(molecule, isomericSmiles=True)
+    standardized = chem.MolToSmiles(parent, isomericSmiles=True)
+    return IndexedMolecule(
+        molecule_id=molecule_id,
+        original_smiles=original,
+        standardized_smiles=standardized,
+        conformers=(
+            FeatureConformer(
+                conformer_id=0,
+                features=_features_for_conformer(parent, 0),
+            ),
+        ),
+        source=source,
+    )
+
+
 def load_chemical_library(
     path: Path,
     *,

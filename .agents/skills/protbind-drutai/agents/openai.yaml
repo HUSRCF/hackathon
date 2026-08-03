@@ -1,0 +1,4 @@
+interface:
+  display_name: "ProtBind DrutAI"
+  short_description: "Run optional audited DrutAI concordance annotations"
+  default_prompt: "Use $protbind-drutai to inspect, acquire, or run an annotation-only DrutAI model safely."

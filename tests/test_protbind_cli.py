@@ -190,6 +190,95 @@ def test_p2rank_parse_requires_version_provenance() -> None:
     assert arguments.p2rank_version == "P2Rank 2.5"
 
 
+def test_drutai_acquisition_requires_license_and_exact_network_options() -> None:
+    parser = _build_parser()
+    with pytest.raises(SystemExit):
+        parser.parse_args(
+            (
+                "predictor",
+                "drutai-acquire",
+                "--model",
+                "convmixer64",
+                "--approve-network",
+                "raw.githubusercontent.com",
+            )
+        )
+
+    arguments = parser.parse_args(
+        (
+            "predictor",
+            "drutai-acquire",
+            "--model",
+            "convmixer64",
+            "--approve-network",
+            "raw.githubusercontent.com",
+            "--accept-gpl-3.0",
+        )
+    )
+    assert arguments.predictor_command == "drutai-acquire"
+    assert arguments.accept_gpl_3_0 is True
+
+
+def test_drutai_annotation_requires_private_data_confirmation() -> None:
+    parser = _build_parser()
+    common = (
+        "predictor",
+        "drutai-annotate",
+        "--input",
+        "private/input.tsv",
+        "--fasta-directory",
+        "private/fasta",
+        "--model",
+        "convmixer64",
+    )
+    with pytest.raises(SystemExit):
+        parser.parse_args(common)
+
+    arguments = parser.parse_args((*common, "--confirm-data-access"))
+    assert arguments.predictor_command == "drutai-annotate"
+    assert arguments.confirm_data_access is True
+
+
+def test_experiment_preview_and_fit_require_private_data_confirmation() -> None:
+    parser = _build_parser()
+    with pytest.raises(SystemExit):
+        parser.parse_args(("experiment", "preview", "--source", "assay.csv"))
+    with pytest.raises(SystemExit):
+        parser.parse_args(
+            (
+                "experiment",
+                "fit",
+                "--experiment-id",
+                "exp-1",
+                "--model",
+                "four-parameter-logistic",
+            )
+        )
+
+    preview = parser.parse_args(
+        (
+            "experiment",
+            "preview",
+            "--source",
+            "assay.csv",
+            "--confirm-data-access",
+        )
+    )
+    fit = parser.parse_args(
+        (
+            "experiment",
+            "fit",
+            "--experiment-id",
+            "exp-1",
+            "--model",
+            "four-parameter-logistic",
+            "--confirm-data-access",
+        )
+    )
+    assert preview.experiment_command == "preview"
+    assert fit.experiment_command == "fit"
+
+
 def test_case_gate_and_advance_parse_closed_loop_arguments() -> None:
     gate = _build_parser().parse_args(("case", "gate", "run-1"))
     advance = _build_parser().parse_args(

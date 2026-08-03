@@ -133,14 +133,20 @@ fpocket/P2Rank 共识自动调度；进入正式 ligand-only 流程前仍须实�
 
 ## 6. DrutAI
 
-DrutAI 当前不进入候选淘汰和科学证据。`protbind doctor` 返回
-`BLOCKED_PENDING_BAKEOFF`，原因包括：
+DrutAI 已作为默认关闭的外部序列—SMILES一致性注释器接入，不进入候选淘汰或实验科学证据。
+ProtBind 不复制上游实现，也不随源码、wheel、Docker 或提交材料分发 ONNX 权重。七个模型固定到
+`HUSRCF/drutai_snap@5ee6ba7037466609edc06329782dee9298f20f2b` 的文件名、大小和 Git blob
+commitment；首次获取要求批准 `raw.githubusercontent.com` 并精确确认 `GPL-3.0-only`，随后记录
+观测 SHA-256、来源、curl 回执和私有缓存 artifact。
 
-- 上游固定 Python 3.11、TensorFlow 2.14、NumPy 1.24.3、RDKit `<2025`，与 core Python 3.12
-  不兼容，必须是独立 worker；
-- 仓库许可证与源码 header 存在冲突；
-- 模型权重、哈希、模型卡、训练域、拆分泄漏与校准资料尚未冻结；
-- 尚未完成公开 positive/negative/decoy bake-off。
+执行通过独立 `drutai.predict` 子进程和普通 TSV 通信，强制 `--no-cache`，私有序列/SMILES 在运行前
+由 ProtBind fail closed 校验。普通二进制使用 bubblewrap `--unshare-net`；`/snap/bin` worker 则在
+每次调用前核验 Snap 为 strict confinement、非 devmode/trymode 且没有已连接的 `network*` interface，
+并把两份 Snap 元数据的 SHA-256 写入 bundle。任何检查失败都拒绝启动，避免 nested bubblewrap 剥夺
+`snap-confine` capability。输出身份、顺序、概率范围和 0.5 分类规则必须完全匹配，否则整次调用失败。
+结果只有 `SUPPORTIVE`、`DISCORDANT`、`ABSTAIN`；均为
+`decision_eligible=false` 和 `hard_filter_allowed=false`。
 
-只有这些门禁全部通过后，DrutAI 才可作为 annotation-only 二分类器；不能 hard-filter，也不能被
-称为结合、亲和力、活性、姿态或验证证据。
+已按项目维护者确认记录 ONNX 与 publication/original 输出一致，不重复将其列为 blocker。仍待完成的
+科学门包括训练域与拆分泄漏记录、适用域/校准，以及公开 positive/inactive bake-off。因此 DrutAI
+不能被称为结合 verifier，也不能升级结合、亲和力、活性、姿态或实验验证证据。

@@ -1,0 +1,122 @@
+{
+  "backend": "cpu-reference",
+  "duration_seconds": {
+    "p50": 0.3528244769995581,
+    "p95": 0.36261822659998866,
+    "samples": [
+      0.3528244769995581,
+      0.35200272900056007,
+      0.3491801509999277,
+      0.36474925899983646,
+      0.3540940970005977
+    ]
+  },
+  "eligible_as_hip_performance_evidence": false,
+  "hardware": {
+    "architectures": [
+      "gfx1100",
+      "gfx11"
+    ],
+    "captured_at": "2026-08-02T11:49:02.958448+00:00",
+    "competition_roles": [
+      "primary-radeon-rdna3",
+      "unclassified"
+    ],
+    "device_architectures": [
+      "gfx1100",
+      "gfx1100"
+    ],
+    "evidence": [
+      {
+        "available": true,
+        "command": [
+          "rocminfo"
+        ],
+        "error": null,
+        "output_sha256": "e9e23b3095de23a9fc224e2718a08656da145c22753f5d4146ab1ab5df8c1bd3",
+        "relevant_output": [
+          "Compute Unit:            128",
+          "Name:                    gfx1100",
+          "Compute Unit:            96",
+          "Name:                    amdgcn-amd-amdhsa--gfx1100",
+          "Name:                    amdgcn-amd-amdhsa--gfx11-generic",
+          "Name:                    gfx1100",
+          "Compute Unit:            96",
+          "Name:                    amdgcn-amd-amdhsa--gfx1100",
+          "Name:                    amdgcn-amd-amdhsa--gfx11-generic"
+        ],
+        "return_code": 0
+      },
+      {
+        "available": true,
+        "command": [
+          "amd-smi",
+          "static",
+          "--json"
+        ],
+        "error": null,
+        "output_sha256": "53368d6c27a6f13e98036a118619812cb2f5fe20c61511b1f2544f8c769b7e0f",
+        "relevant_output": [
+          "\"target_graphics_version\": \"gfx1100\",",
+          "\"slowdown_vram_temperature\": {",
+          "\"shutdown_vram_temperature\": {",
+          "\"GFX\": \"DISABLED\",",
+          "\"vram\": {",
+          "\"target_graphics_version\": \"gfx1100\",",
+          "\"slowdown_vram_temperature\": {",
+          "\"shutdown_vram_temperature\": {",
+          "\"GFX\": \"DISABLED\",",
+          "\"vram\": {"
+        ],
+        "return_code": 0
+      },
+      {
+        "available": true,
+        "command": [
+          "rocm-smi",
+          "--showproductname",
+          "--showmeminfo",
+          "vram",
+          "--showdriverversion"
+        ],
+        "error": null,
+        "output_sha256": "59149e3803439410194d1fb41e48f19ec05091a3a039d84f543a4c4bd4a30278",
+        "relevant_output": [
+          "Driver version: 6.19.14.31400000",
+          "GPU[0]\t\t: VRAM Total Memory (B): 48301604864",
+          "GPU[0]\t\t: VRAM Total Used Memory (B): 137478144",
+          "GPU[1]\t\t: VRAM Total Memory (B): 48301604864",
+          "GPU[1]\t\t: VRAM Total Used Memory (B): 82350080",
+          "GPU[0]\t\t: Card Series: \t\tAMD Radeon Pro W7900",
+          "GPU[0]\t\t: Card Model: \t\t0x7448",
+          "GPU[0]\t\t: GFX Version: \t\tgfx1100",
+          "GPU[1]\t\t: Card Series: \t\tAMD Radeon Pro W7900 Dual Slot",
+          "GPU[1]\t\t: Card Model: \t\t0x744a",
+          "GPU[1]\t\t: GFX Version: \t\tgfx1100"
+        ],
+        "return_code": 0
+      }
+    ],
+    "host_fingerprint": "b5d65f0ae389b602",
+    "hsa_override_active": false,
+    "platform": "Linux-7.0.0-28-generic-x86_64-with-glibc2.39",
+    "python_version": "3.12.7",
+    "rocm_version": null
+  },
+  "index": {
+    "chemistry_verified": true,
+    "config_hash": "1e4e5878f43ec9213a7af4a4a10f59332c158223ace218c058099b63b6c0fc3e",
+    "conformer_count": 5067,
+    "index_sha256": "5e2e25396ec0466c482c65d0dff6be1897713b21ce768b98410e342e550bc6ca",
+    "input_sha256": null,
+    "molecule_count": 5067,
+    "triangle_count": 2584816
+  },
+  "query_sha256": "b08b32039a669030e49af9a26bb33ddd84780d1f41b8b4ab6c7b44f85d9bee3f",
+  "ranked_molecule_ids_sha256": "b28d18b72870ff54cf9ab2f4b47c343c1c1ef3c44669126b9de87447b6baf685",
+  "repetitions": 5,
+  "result_count": 245,
+  "schema_version": "1.0",
+  "top_k": 5067,
+  "warmup_runs": 1
+}

@@ -13,7 +13,9 @@ venv/
 artifacts/
 benchmark-results/
 build/
-experiment-results/
+experiment-results/*
+!experiment-results/pharmacophore-three-way-20260802/
+!experiment-results/pharmacophore-three-way-20260802/*.json
 tools/bin/vina
 tools/bin/pixi
 third_party/openfold-3/

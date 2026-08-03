@@ -48,6 +48,17 @@ _PACKS: dict[str, frozenset[str]] = {
         }
     ),
     "public-fetch": frozenset({"doctor", "fetch_public_data"}),
+    "drutai": frozenset(
+        {"drutai_status", "drutai_model_acquire", "drutai_annotate"}
+    ),
+    "experiment": frozenset(
+        {
+            "experiment_import_preview",
+            "experiment_import_commit",
+            "experiment_list",
+            "experiment_fit_curve",
+        }
+    ),
 }
 
 _PACK_TERMS: dict[str, tuple[str, ...]] = {
@@ -119,6 +130,23 @@ _PACK_TERMS: dict[str, tuple[str, ...]] = {
         "下载",
         "获取公开",
         "拉取",
+    ),
+    "drutai": (
+        "drutai",
+        "dti",
+        "sequence-smiles",
+        "结合注释",
+        "一致性注释",
+    ),
+    "experiment": (
+        "assay",
+        "experiment",
+        "dose response",
+        "curve fit",
+        "实验数据",
+        "剂量响应",
+        "拟合",
+        "批次",
     ),
 }
 

@@ -1,5 +1,47 @@
 # Radeon Agent Lab
 
+## AMD AI DevMaster Hackathon — judge quick start
+
+**Track 2: Agentic AI.** ProtBind is a local-private protein–ligand research Agent that runs its
+LLM through HipFire on AMD Radeon GPUs, keeps private sequences and compounds on the workstation,
+and delegates scientific work only to typed, auditable tools. The model cannot invent docking
+scores, bypass approvals, or silently promote a prediction into experimental evidence.
+
+Submission materials:
+
+- [Project specification](submission/PROJECT_SPECIFICATION.md)
+- [Reproducibility guide](submission/REPRODUCIBILITY.md)
+- [Claim and evidence matrix](submission/CLAIM_MATRIX.md)
+- [Demo script](submission/DEMO_SCRIPT.md)
+- [Pitch deck source](submission/PITCH_DECK.md)
+- [Submission checklist and gap audit](submission/SUBMISSION_CHECKLIST.md)
+
+Validated Radeon evidence includes a three-repeat local Agent benchmark on a Radeon Pro W7900
+(`gfx1100`) with 100% required-tool success and artifact-citation rates, 16.552 s p50 end-to-end
+latency, 9.605 s p50 first-model TTFT, 33.139 end-to-end model tokens/s, and 7.271 GB observed peak
+VRAM. TriPharm's ROCm HIP prefilter has exact complete-score parity with its CPU reference on the
+frozen three-target evaluation; its kernel is fast, but the current CPU exact finalizer means no
+end-to-end screening speedup is claimed.
+
+Quick validation in the prepared AIAA science overlay:
+
+```bash
+scripts/bootstrap-aiaa-protbind.sh --download-vina
+scripts/aiaa-protbind.sh -m protbind_agent doctor
+.venv-aiaa-protbind/bin/python -m pytest
+ruff check .
+```
+
+Build the ROCm HIP components:
+
+```bash
+cmake -S kernels/tripharm_hip -B build/tripharm_hip -DCMAKE_BUILD_TYPE=Release
+cmake --build build/tripharm_hip -j
+```
+
+The full development notes below preserve detailed scientific limitations and historical
+receipts. All files under `submission/` are the English judging package.
+
 面向 AMD AI DevMaster Hackathon **Track 2: Agentic AI** 的本地私有 Agent 骨架。计划中的最终部署与
 验收矩阵为 1/2/4×`gfx1100`；当前主机是 2×Radeon Pro W7900，但现有折叠 adapter 仍是单
 GPU、单 job 路径，尚未实现或验证多 GPU adapter 调度。`gfx1201` 只保留为有设备时的可选交叉检查，
@@ -199,15 +241,18 @@ MCP，默认拒绝所有工具；case 只读状态/报告可直接调用，创�
 私有 PDF、protein/ligand library 连读取也始终为 `ask`，且工具参数还要求一次新的显式确认。项目 skills
 位于 [`.agents/skills/protbind-research/SKILL.md`](.agents/skills/protbind-research/SKILL.md)
 和 [`.agents/skills/protbind-library/SKILL.md`](.agents/skills/protbind-library/SKILL.md)，
+以及 [`.agents/skills/protbind-drutai/SKILL.md`](.agents/skills/protbind-drutai/SKILL.md)，
+以及 [`.agents/skills/protbind-assay-data/SKILL.md`](.agents/skills/protbind-assay-data/SKILL.md)，
 OpenCode 可原生发现。完整 CLI、迁移/验证状态、P2Rank 与 DrutAI 门禁见
 [私有数据仓库与外部预测器说明](DOCs/PROTBIND_LIBRARY_AND_EXTERNAL_PREDICTORS.md)。
 PDF/OCR 门禁、引用语义和蛋白库 RAG 模型选择见
 [PDF 与蛋白库 RAG 说明](DOCs/PROTBIND_PDF_AND_LIBRARY_RAG.md)。
 配置未写入不存在的 production worker digest；因此默认会诚实运行到能力门并
 停住，生产时须由操作者在 MCP command 中加入已审核的
-`--worker-config configs/protbind-workers.toml`。当前精确白名单的 23 个受限工具已完成 MCP 1.14
+`--worker-config configs/protbind-workers.toml`。当前精确白名单的 30 个受限工具已完成 MCP 1.14
 stdio 真实 initialize/list-tools 握手与权限回归。普通 public-data fetch 与 accession-only
-UniProt 验证是仅有的受控网络表面，
+UniProt 验证，以及默认关闭、固定 commit/模型/域名并要求 GPL 确认的 DrutAI 权重获取，是仅有的
+受控网络表面；DrutAI 私有推理本身在无网络 namespace 中运行，
 只接受白名单 source/公开 ID/精确域名批准；`case_dossier` 与 `case_pose_view` 仍为只读、无坐标工具。
 本机 OpenCode 1.18.8 已完成 DeepSeek V4 Flash 的无工具云端传输冒烟测试。内置 Agent 已用本地
 HipFire/Qwen3.5-9B 在 W7900 上完成流式结构化工具调用烟测；DeepSeek 仍只可作为公开数据的协议
@@ -223,6 +268,45 @@ hash-bound ShadowPlan，只罗列可取消的条件分支和 UI/report 准备工
 写入。协议、威胁模型和性能验收见
 [ShadowPlan Spotlight](DOCs/PROTBIND_SHADOWPLAN_SPOTLIGHT.md)；可用
 `--no-tool-routing` 生成完整 schema 的对照运行。
+
+DrutAI 是可选的序列—SMILES 一致性注释器，不随 ProtBind 分发权重或上游代码。独立手写的
+[`drutai.py`](src/protbind_agent/drutai.py) 适配模块按
+[`MIT`](LICENSES/ProtBind-DrutAI-adapter-MIT.txt) 单独授权；该授权明确不覆盖 ONNX 权重、上游仓库
+或独立安装的 `drutai.predict`：
+
+```bash
+# 只读检查
+protbind predictor drutai-status --workspace artifacts/protbind
+
+# 首次获取一个固定 Git commit 的第三方 ONNX 权重；命令会先显示 GPL 警告
+protbind predictor drutai-acquire --model convmixer64 \
+  --approve-network raw.githubusercontent.com --accept-gpl-3.0 \
+  --workspace artifacts/protbind
+
+# 私有运行要求显式数据确认；外部 worker 禁用缓存并隔离网络
+protbind predictor drutai-annotate --input private/candidates.tsv \
+  --fasta-directory private/fasta --model convmixer64 \
+  --confirm-data-access --workspace artifacts/protbind
+```
+
+输出只允许 `SUPPORTIVE | DISCORDANT | ABSTAIN` 注释，始终设置
+`decision_eligible=false`、`hard_filter_allowed=false`，不能作为结合、亲和力、活性或姿态证据。普通
+worker 使用 bubblewrap 禁网；Snap worker 每次动态确认 strict confinement、非 devmode/trymode 且无
+已连接 `network*` interface，并将审计哈希写入结果 bundle。
+
+湿实验数据使用 preview/commit 两步导入，原始文件和规范化 JSON 不可变，SQLite 只保存精确 artifact
+引用与结构化测量；当前没有任意 SQL、原地更新或删除表面：
+
+```bash
+protbind experiment preview --source private/assay.csv \
+  --confirm-data-access --workspace artifacts/protbind
+protbind experiment commit --source private/assay.csv --plan-id <fresh-plan-id> \
+  --confirm-data-access --workspace artifacts/protbind
+protbind experiment fit --experiment-id exp-1 --model four-parameter-logistic \
+  --confirm-data-access --workspace artifacts/protbind
+```
+
+拟合模型必须由实验方案预先选择；fit receipt 不会自动升级为直接结合、细胞靶点结合或机制证据。
 
 protocol revision 2 已把确认从工具 handler 内的同步回调改为进程内
 `WAITING_APPROVAL -> resume`：pending call 不会作为假失败送回模型，等待时间不占 Agent
@@ -510,6 +594,18 @@ PDB release-time 与 assay/label receipt；原始序列、标签和实体 ID 不
 pocket cluster 与本地提供的 PDB 日期只做 hash-bound 审计，不伪称已复核其上游算法或 RCSB
 真实性。详见
 [`DOCs/PROTBIND_CROSS_MODAL_LEAKAGE_AUDIT.md`](DOCs/PROTBIND_CROSS_MODAL_LEAKAGE_AUDIT.md)。
+可选的本地 MMseqs2 同源检索/序列聚类命令见
+[`DOCs/PROTBIND_MMSEQS_OPTIONAL.md`](DOCs/PROTBIND_MMSEQS_OPTIONAL.md)；它不进入 docking
+状态机，也不产生结合亲和力或 AMD 性能结论。
+独立 Pharmer CPU baseline 与 TriPharm CPU/HIP 的 DUD-E、LIT-PCBA 三方对标、可复现实验收据及
+科学适用边界见
+[`DOCs/PROTBIND_PHARMER_THREE_WAY_BENCHMARK.md`](DOCs/PROTBIND_PHARMER_THREE_WAY_BENCHMARK.md)。
+冻结的 ALDH1、MAPK1、MTORC1 one-shot validation 已完成：完整性门和探索性门通过，
+competition-strength 门因 median EF1 `1.293 < 2` 未通过；三靶点 CPU/HIP 完整分数均精确一致，
+但 CPU exact finalizer 主导端到端时间，因此不支持应用级 Radeon 加速声明。机器可读汇总见
+[`experiment-results/pharmacophore-three-way-20260802/prospective-three-target-aggregate-v1.json`](experiment-results/pharmacophore-three-way-20260802/prospective-three-target-aggregate-v1.json)，
+aggregate SHA-256 为
+`5ac3a9caa8a17cd445ebb5422ee0df073da829df6ead1714bad40c443eaa362d`。
 完整哈希、逐例指标和适用边界见
 [`refine-logs/EXPERIMENT_RESULTS.md`](refine-logs/EXPERIMENT_RESULTS.md)。Vina score 只作为工具分数，
 不得解释为实验结合自由能。

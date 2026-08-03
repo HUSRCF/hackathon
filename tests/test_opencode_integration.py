@@ -49,7 +49,16 @@ def test_opencode_configuration_is_local_and_default_deny() -> None:
     ):
         assert config["permission"][name] == "ask"
     assert config["permission"]["protbind_knowledge_model_status"] == "allow"
+    assert config["permission"]["protbind_drutai_status"] == "allow"
+    assert config["permission"]["protbind_drutai_model_acquire"] == "ask"
+    assert config["permission"]["protbind_drutai_annotate"] == "ask"
+    assert config["permission"]["protbind_experiment_import_preview"] == "ask"
+    assert config["permission"]["protbind_experiment_import_commit"] == "ask"
+    assert config["permission"]["protbind_experiment_list"] == "ask"
+    assert config["permission"]["protbind_experiment_fit_curve"] == "ask"
     assert config["permission"]["skill"]["protbind-library"] == "allow"
+    assert config["permission"]["skill"]["protbind-drutai"] == "allow"
+    assert config["permission"]["skill"]["protbind-assay-data"] == "allow"
 
 
 def test_opencode_shadowplan_plugin_is_redacted_and_event_complete() -> None:
