@@ -122,7 +122,9 @@ def test_agent_calls_bounded_tool_and_returns_timeline(tmp_path) -> None:
 
     assert result.answer == "本地能力已检查。"
     assert result.tool_calls == 1
-    assert result.tool_results == ({"name": "doctor", "ok": True},)
+    assert result.tool_results == (
+        {"name": "doctor", "ok": True, "automatic_retry_blocked": False},
+    )
     assert result.validated_artifact_citations == ()
     assert result.citation_warnings == ()
     assert result.tool_timeline[0]["tool"] == "doctor"

@@ -51,6 +51,78 @@ def test_agent_runs_tool_then_returns_answer() -> None:
     assert json.loads(tool_message.content or "{}")["value"] == 5
 
 
+def test_agent_counts_reused_tool_call_ids_on_distinct_model_turns() -> None:
+    backend = MockBackend(
+        [
+            ChatResponse(
+                content="",
+                tool_calls=(
+                    ToolCall(id="reused", name="add", arguments={"a": 1, "b": 1}),
+                ),
+            ),
+            ChatResponse(
+                content="",
+                tool_calls=(
+                    ToolCall(id="reused", name="add", arguments={"a": 2, "b": 2}),
+                ),
+            ),
+            ChatResponse(content="完成。"),
+        ]
+    )
+    agent = Agent(backend, model="test", tools=ToolRegistry([_add_tool()]))
+
+    result = agent.run("依次计算两次。")
+
+    assert result.tool_calls == 2
+    assert len(result.tool_results) == 2
+
+
+def test_agent_blocks_identical_failed_tool_retry_when_policy_disallows_it() -> None:
+    executions = 0
+
+    def fail(_arguments):
+        nonlocal executions
+        executions += 1
+        raise ValueError("fixture failure")
+
+    tool = ToolSpec(
+        name="fail_once",
+        description="Always fail for this test.",
+        parameters={"type": "object", "properties": {}},
+        handler=fail,
+    )
+    backend = MockBackend(
+        [
+            ChatResponse(
+                content="",
+                tool_calls=(ToolCall(id="first", name="fail_once", arguments={}),),
+            ),
+            ChatResponse(
+                content="",
+                tool_calls=(ToolCall(id="second", name="fail_once", arguments={}),),
+            ),
+            ChatResponse(content="已停止。"),
+        ]
+    )
+    agent = Agent(
+        backend,
+        model="test",
+        tools=ToolRegistry([tool]),
+        allow_failed_tool_retries=False,
+    )
+
+    result = agent.run("失败后停止。")
+
+    assert executions == 1
+    assert result.tool_calls == 2
+    assert [item.automatic_retry_blocked for item in result.tool_results] == [
+        False,
+        True,
+    ]
+    blocked_message = json.loads(backend.requests[2].messages[-1].content or "{}")
+    assert "automatic retry blocked" in blocked_message["error"]
+
+
 def test_agent_enforces_max_steps() -> None:
     call = ChatResponse(
         content="",

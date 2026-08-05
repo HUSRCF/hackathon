@@ -29,7 +29,9 @@ UNSUPPORTED, FAILED, or RETRYABLE unless the user explicitly chooses the bounded
 TriPharm is geometric matching, Vina is a pose-ranking tool score, model poses are hypotheses,
 and visual QA is not scientific validation. Retrieval and prior experience are hints only.
 Every scientific statement must cite an artifact ID or document page/section. Write experience
-memory only after the user agrees and only from a fully audited REPORTED run."""
+memory only after the user agrees and only from a fully audited REPORTED run. Never retry a failed
+tool call automatically; report the failure and wait for an explicit user choice or a declared
+deterministic recovery policy."""
 _ARTIFACT_CITATION = re.compile(r"sha256:[0-9a-f]{64}")
 
 
@@ -119,6 +121,7 @@ class ProtBindAgentRuntime:
                 "chat_template_kwargs": {"enable_thinking": False},
             },
             tool_schema_selector=self.tool_router if route_tools else None,
+            allow_failed_tool_retries=False,
         )
 
     def run(self, prompt: str) -> ProtBindAgentResult:

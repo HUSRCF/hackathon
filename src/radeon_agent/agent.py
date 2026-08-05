@@ -63,6 +63,7 @@ class AgentResult:
 class ToolExecution:
     name: str
     ok: bool
+    automatic_retry_blocked: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -107,7 +108,7 @@ class _AgentRunState:
     current_tool_calls: tuple[ToolCall, ...] = ()
     current_tool_index: int = 0
     current_selected_tools: tuple[str, ...] = ()
-    counted_call_ids: set[str] = field(default_factory=set)
+    failed_tool_signatures: set[str] = field(default_factory=set)
     pending_tool: PendingToolExecution | None = None
 
 
@@ -131,6 +132,7 @@ class Agent:
         stream: bool = False,
         request_extra: dict[str, Any] | None = None,
         tool_schema_selector: ToolSchemaSelector | None = None,
+        allow_failed_tool_retries: bool = True,
     ) -> None:
         if max_steps < 1:
             raise ValueError("max_steps must be >= 1")
@@ -146,6 +148,7 @@ class Agent:
         self.stream = stream
         self.request_extra = dict(request_extra or {})
         self.tool_schema_selector = tool_schema_selector
+        self.allow_failed_tool_retries = allow_failed_tool_retries
         self._paused_sessions: dict[str, _AgentRunState] = {}
 
     def run(self, user_input: str) -> AgentResult:
@@ -268,10 +271,27 @@ class Agent:
                 self._check_timeout(state, segment_start)
                 if state.current_tool_index < len(state.current_tool_calls):
                     call = state.current_tool_calls[state.current_tool_index]
-                    if call.id not in state.counted_call_ids:
-                        state.counted_call_ids.add(call.id)
-                        state.tool_call_count += 1
-                    if call.name not in state.current_selected_tools:
+                    signature = json.dumps(
+                        [call.name, call.arguments],
+                        ensure_ascii=False,
+                        sort_keys=True,
+                        separators=(",", ":"),
+                    )
+                    blocked_retry = (
+                        not self.allow_failed_tool_retries
+                        and signature in state.failed_tool_signatures
+                    )
+                    if blocked_retry:
+                        result = ToolResult(
+                            name=call.name,
+                            ok=False,
+                            error=(
+                                "automatic retry blocked after an identical tool "
+                                "call failed; wait for explicit user choice or a "
+                                "declared deterministic recovery policy"
+                            ),
+                        )
+                    elif call.name not in state.current_selected_tools:
                         result = ToolResult(
                             name=call.name,
                             ok=False,
@@ -298,8 +318,14 @@ class Agent:
                             segment_start,
                         )
                     state.tool_results.append(
-                        ToolExecution(name=call.name, ok=result.ok)
+                        ToolExecution(
+                            name=call.name,
+                            ok=result.ok,
+                            automatic_retry_blocked=blocked_retry,
+                        )
                     )
+                    if not result.ok:
+                        state.failed_tool_signatures.add(signature)
                     state.messages.append(
                         Message(
                             role="tool",
@@ -403,6 +429,11 @@ class Agent:
                         answer=response.content,
                         segment_start=segment_start,
                     )
+                # Count invocations per model response rather than globally unique
+                # call IDs. OpenAI-compatible backends may reuse an ID on a later
+                # turn. Counting here also prevents approval resume from counting
+                # the same invocation twice.
+                state.tool_call_count += len(response.tool_calls)
                 state.current_tool_calls = response.tool_calls
                 state.current_tool_index = 0
                 state.current_selected_tools = selected_tools
