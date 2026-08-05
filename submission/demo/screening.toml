@@ -1,0 +1,10 @@
+[screening]
+top_k = 3
+rrf_k = 60
+backend = "hip"
+hip_executable = "build/tripharm_hip/tripharm_hip_query"
+parity_top_k = 3
+hip_timeout_seconds = 120
+
+# This configuration fails closed: the SCREENED stage is not accepted unless the HIP
+# prefilter runs and its complete ranked molecule-ID order matches the CPU reference.

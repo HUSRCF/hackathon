@@ -1,6 +1,6 @@
 # AMD AI DevMaster submission checklist
 
-Status date: 2026-08-03. Deadline: 2026-08-06 23:59 UTC+8.
+Status date: 2026-08-05. Deadline: 2026-08-06 23:59 UTC+8.
 
 ## Eligibility and registration — human action required
 
@@ -21,6 +21,7 @@ Status date: 2026-08-03. Deadline: 2026-08-06 23:59 UTC+8.
 - [ ] Freeze a clean final Git commit and record its SHA-256 evidence identities.
 - [ ] Record and publish a 3–5 minute continuous Radeon demo video.
 - [x] Demo script and public-data recording checklist.
+- [x] One-command synthetic Radeon demo with fail-closed preflight and CPU/HIP parity receipt.
 - [x] Editable PPTX generated and visually inspected.
 
 ## PR submission
@@ -40,9 +41,8 @@ Status date: 2026-08-03. Deadline: 2026-08-06 23:59 UTC+8.
 - [x] Full test suite passes in the AIAA science overlay.
 - [ ] Rerun tests, doctor and demo commands on the frozen submission commit.
 - [ ] Capture `rocm-smi`, HipFire health and actual end-to-end UI/CLI execution in the video.
-- [ ] After freezing a clean commit, run the same Agent benchmark with tool routing enabled and
-  disabled. Report the A/B even if routing does not improve latency; the current receipt provides
-  absolute Radeon performance but not a before/after optimization result.
+- [x] Counterbalanced routed/full Qwen3.6-27B Agent A/B completed on W7900; report exact context
+  reduction and keep the observed latency ratio explicitly exploratory.
 - [ ] Decide whether R9700/gfx1201 cross-verification can finish without risking the submission.
 
 ## Security and licensing

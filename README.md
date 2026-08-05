@@ -12,6 +12,7 @@ Submission materials:
 - [Project specification](submission/PROJECT_SPECIFICATION.md)
 - [Reproducibility guide](submission/REPRODUCIBILITY.md)
 - [Claim and evidence matrix](submission/CLAIM_MATRIX.md)
+- [One-command Radeon demo](submission/demo/README.md)
 - [Demo script](submission/DEMO_SCRIPT.md)
 - [Pitch deck source](submission/PITCH_DECK.md)
 - [Submission checklist and gap audit](submission/SUBMISSION_CHECKLIST.md)

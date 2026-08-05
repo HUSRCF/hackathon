@@ -56,7 +56,7 @@ ruff check .
 python -m compileall -q src tests
 ```
 
-The current working tree collects 454 tests. The final submission must rerun this command after the
+The current working tree collects 456 tests. The final submission must rerun this command after the
 submission commit is frozen and record the resulting commit SHA.
 
 ## Minimal offline screening smoke
@@ -67,13 +67,21 @@ submission commit is frozen and record the resulting commit SHA.
   --output artifacts/protbind/library.sqlite
 
 .venv-aiaa-protbind/bin/protbind case run \
-  --case examples/case.json \
+  --case submission/demo/case.json \
   --index artifacts/protbind/library.sqlite \
   --mode ligand_only \
   --stop-after screened
 ```
 
 This example is a protocol smoke, not a biological validation result.
+
+For the competition recording, use the stricter one-command workflow. It requires a real Radeon
+HIP execution, complete CPU/HIP ranked-ID parity, a fresh synthetic workspace, and an interactive
+Agent approval:
+
+```bash
+submission/demo/run-demo.sh run --gpu 1 --model qwen3.6:27b
+```
 
 ## Start the local Agent
 

@@ -9,6 +9,25 @@
   compounds.
 - State scientific boundaries verbally; never call a score experimental affinity.
 
+Prepare outside the recording if desired:
+
+```bash
+submission/demo/run-demo.sh prepare
+```
+
+Then start recording and execute the frozen public workflow:
+
+```bash
+submission/demo/run-demo.sh run \
+  --gpu 1 \
+  --model qwen3.6:27b \
+  --base-url http://127.0.0.1:11435/v1
+```
+
+The command refuses a dirty Git tree, a non-loopback model endpoint, missing Radeon/HIP evidence,
+CPU/HIP ranked-ID disagreement, and any case that does not reach the accepted synthetic
+`SCREENED` state. The approval response remains interactive and is never piped by the script.
+
 ## Shot list (target: 4 minutes 30 seconds)
 
 ### 0:00–0:25 — Problem and product
@@ -77,7 +96,7 @@ wet-lab feedback without allowing the Agent to overstate evidence.”
 
 ## Pre-recording checklist
 
-- Freeze a public demo case and exact commands.
+- [x] Freeze a public synthetic demo case and exact commands under `submission/demo/`.
 - Warm HipFire once, then restart the screen recording before the measured demo.
 - Close unrelated terminals and notifications.
 - Verify font size at 1080p.

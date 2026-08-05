@@ -1,0 +1,21 @@
+{
+  "case_id": "submission-demo-synthetic",
+  "title": "Synthetic protocol and Radeon runtime demonstration; not a biological result",
+  "mode": "ligand_only",
+  "seed": 20260805,
+  "target": {
+    "name": "synthetic-alanine-receptor",
+    "sequences": ["A"],
+    "structure_file": "submission/demo/synthetic-receptor.pdb"
+  },
+  "ligand": {
+    "pharmacophore_file": "examples/ligand-query.json",
+    "heavy_atom_count": 4
+  },
+  "privacy": {
+    "network_allowed": false,
+    "approved_domains": [],
+    "sequence_upload_allowed": false,
+    "redact_internal_paths": true
+  }
+}
